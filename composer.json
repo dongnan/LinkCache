@@ -1,0 +1,20 @@
+{
+    "name": "dongnan/linkcache",
+    "type": "library",
+    "description": "A flexible and high-performance library of cache for PHP",
+    "keywords": ["linkcache", "cache", "php"],
+    "homepage": "http://git.oschina.net/dongnan/linkcache",
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "dongnan",
+            "email": "hidongnan@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0"
+    },
+    "autoload": {
+        "psr-4": {"linkcache\\": "src/linkcache/"}
+    }
+}
