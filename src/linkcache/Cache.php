@@ -226,7 +226,7 @@ class Cache {
         if ($difftime) {
             return $this->driver->expire($key, $difftime);
         } else {
-            return $this->del($key);
+            return $this->driver->del($key);
         }
     }
 
@@ -249,11 +249,11 @@ class Cache {
         if (method_exists($this->driver, 'incr')) {
             return $this->driver->incr($key, $step);
         } else {
-            $value = $this->get($key);
+            $value = $this->driver->get($key);
             if (!is_int($value) || !is_int($step)) {
                 return false;
             }
-            return $this->set($key, $value + $step);
+            return $this->driver->set($key, $value + $step);
         }
     }
 
@@ -267,11 +267,11 @@ class Cache {
         if (method_exists($this->driver, 'incrByFloat')) {
             return $this->driver->incrByFloat($key, $float);
         } else {
-            $value = $this->get($key);
+            $value = $this->driver->get($key);
             if (!is_numeric($value) || !is_numeric($float)) {
                 return false;
             }
-            return $this->set($key, $value + $float);
+            return $this->driver->set($key, $value + $float);
         }
     }
 
@@ -285,11 +285,11 @@ class Cache {
         if (method_exists($this->driver, 'decr')) {
             return $this->driver->decr($key, $step);
         } else {
-            $value = $this->get($key);
+            $value = $this->driver->get($key);
             if (!is_int($value) || !is_int($step)) {
                 return false;
             }
-            return $this->set($key, $value - $step);
+            return $this->driver->set($key, $value - $step);
         }
     }
 
@@ -368,22 +368,22 @@ class Cache {
         } else {
             $values = [];
             foreach ($keys as $key) {
-                $values[] = $this->get($key);
+                $values[] = $this->driver->get($key);
             }
             return $values;
         }
     }
 
     public function __set($name, $value) {
-        return $this->set($name, $value);
+        return $this->driver->set($name, $value);
     }
 
     public function __get($name) {
-        return $this->get($name);
+        return $this->driver->get($name);
     }
 
     public function __unset($name) {
-        $this->del($name);
+        $this->driver->del($name);
     }
 
     /**
