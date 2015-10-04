@@ -29,13 +29,15 @@ class Files implements CacheDriverInterface {
     /**
      * 构造函数
      * @param array $config 配置
-     * @throws \Exception   异常
      */
     public function __construct($config = []) {
         $this->config = $config;
         $this->initPath();
     }
 
+    /**
+     * 初始化路径
+     */
     private function initPath() {
         if (empty($this->config['path'])) {
             $this->config['path'] = (ini_get('upload_tmp_dir') ? ini_get('upload_tmp_dir') : sys_get_temp_dir()) . '/linkcache';
@@ -45,9 +47,14 @@ class Files implements CacheDriverInterface {
         }
     }
 
+    /**
+     * 根据键名获取hash路径
+     * @param string $key
+     * @return boolean|string
+     */
     private function hashPath($key) {
         $md5 = md5($key);
-        $dir = $this->config['path'] . $md5[0] . '/' . $md5[1] . $md5[2];
+        $dir = $this->config['path'] . '/' . $md5[0] . '/' . $md5[1] . $md5[2];
         $path = $dir . '/' . $md5 . '.lc';
         if (!file_exists($dir)) {
             if (!mkdir($dir, 0777, true)) {
