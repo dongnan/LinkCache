@@ -27,13 +27,21 @@ class Cache {
      */
     static protected $config = [
         'default' => '',
-        //Fall back when old driver is not support
+        //当前缓存驱动失效时，采用的备份驱动
         'fallback' => 'files',
         'memcache' => [
-            ['127.0.0.1', 11211, 1],
+            //host,port,weight,persistent,timeout,retry_interval,status,failure_callback
+            'servers' => [
+                ['host' => '127.0.0.1', 'port' => 11211, 'weight' => 1, 'persistent' => true, 'timeout' => 1, 'retry_interval' => 15, 'status' => true],
+            ],
+            'compress' => ['threshold' => 2000, 'min_saving' => 0.2],
         ],
         'memcached' => [
-            ['127.0.0.1', 11211, 1],
+            'servers' => [
+                ['host' => '127.0.0.1', 'port' => 11211, 'weight' => 1],
+            ],
+            //参考 Memcached::setOptions
+            'options' => [],
         ],
         'redis' => [
             'host' => '127.0.0.1',
