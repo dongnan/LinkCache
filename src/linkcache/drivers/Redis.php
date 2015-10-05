@@ -35,7 +35,7 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
     private $handler;
 
     /**
-     * 是否连接redis
+     * 是否连接server
      * @var boolean 
      */
     private $isConnected = false;
@@ -55,6 +55,7 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
         if (!extension_loaded('redis')) {
             throw new \Exception("redis extension is not exists!");
         }
+        $this->handler = new \Redis();
         $this->config = $config;
         $this->connect();
     }
@@ -70,7 +71,6 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
         $timeout = isset($this->config['timeout']) ? $this->config['timeout'] : 1;
         $persistent = isset($this->config['persistent']) ? $this->config['persistent'] : false;
         $func = $persistent ? 'pconnect' : 'connect';
-        $this->handler = new \Redis();
         if (empty($timeout)) {
             $this->isConnected = $this->handler->$func($host, $port);
         } else {
