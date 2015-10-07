@@ -3,7 +3,7 @@
     "type": "library",
     "description": "A flexible and high-performance library of cache for PHP",
     "keywords": ["linkcache", "cache", "php"],
-    "homepage": "http://git.oschina.net/dongnan/linkcache",
+    "homepage": "http://git.oschina.net/dongnan/LinkCache",
     "license": "BSD-3-Clause",
     "authors": [
         {
