@@ -72,13 +72,13 @@ class Files implements CacheDriverInterface {
      * 设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,永不过期
+     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
      * @return boolean      是否成功
      */
     public function set($key, $value, $time = -1) {
         $path = $this->hashPath($key);
         if ($path !== false) {
-            if ($time >= 0 || !file_exists($path)) {
+            if ($time > 0 || !file_exists($path)) {
                 $value = self::setValue(['value' => $value, 'write_time' => time(), 'expire_time' => $time]);
                 return file_put_contents($path, $value, LOCK_EX);
             }
@@ -93,7 +93,7 @@ class Files implements CacheDriverInterface {
      * 当键名不存在时设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,永不过期
+     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
      * @return boolean      是否成功
      */
     public function setnx($key, $value, $time = -1) {
@@ -104,7 +104,7 @@ class Files implements CacheDriverInterface {
                 $old = self::getValue(file_get_contents($path));
                 $toWrite = false;
                 //已过期
-                if ($old['expire_time'] >= 0 && ($old['write_time'] + $old['expire_time']) <= time()) {
+                if ($old['expire_time'] > 0 && ($old['write_time'] + $old['expire_time']) <= time()) {
                     $toWrite = true;
                 }
             }
@@ -129,7 +129,7 @@ class Files implements CacheDriverInterface {
             }
             $value = self::getValue(file_get_contents($path));
             //已过期
-            if ($value['expire_time'] >= 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
+            if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
                 return false;
             }
             return $value['value'];
@@ -151,7 +151,7 @@ class Files implements CacheDriverInterface {
             }
             $value = self::getValue(file_get_contents($path));
             //如果已过期两倍于设置的过期时间,则删除缓存
-            if ($value['expire_time'] >= 0 && ($value['write_time'] + $value['expire_time'] * 2) <= time()) {
+            if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time'] * 2) <= time()) {
                 unlink($path);
             }
             return $value['value'];
@@ -175,7 +175,7 @@ class Files implements CacheDriverInterface {
                 $old = self::getValue(file_get_contents($path));
                 $toWrite = false;
                 //锁已过期
-                if ($old['expire_time'] >= 0 && ($old['write_time'] + $old['expire_time']) <= time()) {
+                if ($old['expire_time'] > 0 && ($old['write_time'] + $old['expire_time']) <= time()) {
                     $toWrite = true;
                 }
             }
@@ -201,11 +201,11 @@ class Files implements CacheDriverInterface {
             }
             $lock = self::getValue(file_get_contents($path));
             //永不过期
-            if ($lock['expire_time'] < 0) {
+            if ($lock['expire_time'] <= 0) {
                 return true;
             }
             //锁未过期
-            if ($lock['expire_time'] >= 0 && ($lock['write_time'] + $lock['expire_time']) > time()) {
+            if ($lock['expire_time'] > 0 && ($lock['write_time'] + $lock['expire_time']) > time()) {
                 return true;
             }
         }
@@ -241,11 +241,11 @@ class Files implements CacheDriverInterface {
             }
             $value = self::getValue(file_get_contents($path));
             //永不过期
-            if ($value['expire_time'] < 0) {
+            if ($value['expire_time'] <= 0) {
                 return true;
             }
             //未过期
-            if ($value['expire_time'] >= 0 && ($value['write_time'] + $value['expire_time']) > time()) {
+            if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time']) > time()) {
                 return true;
             }
         }
@@ -266,7 +266,7 @@ class Files implements CacheDriverInterface {
             }
             $value = self::getValue(file_get_contents($path));
             //永不过期
-            if ($value['expire_time'] < 0) {
+            if ($value['expire_time'] <= 0) {
                 return -1;
             }
             $ttl = time() - ($value['write_time'] + $value['expire_time']);
@@ -284,7 +284,7 @@ class Files implements CacheDriverInterface {
     /**
      * 设置过期时间
      * @param string $key   键名
-     * @param int $time     过期时间(单位:秒)
+     * @param int $time     过期时间(单位:秒)。不大于0，则设为永不过期
      * @return boolean      是否成功
      */
     public function expire($key, $time) {
@@ -295,10 +295,10 @@ class Files implements CacheDriverInterface {
             }
             $value = self::getValue(file_get_contents($path));
             //已过期
-            if ($value['expire_time'] >= 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
+            if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
                 return false;
             }
-            if ($time < 0) {
+            if ($time <= 0) {
                 $value['expire_time'] = -1;
             } else {
                 $value['expire_time'] = time() - $value['write_time'] + $time;
@@ -321,7 +321,7 @@ class Files implements CacheDriverInterface {
             }
             $value = self::getValue(file_get_contents($path));
             //已过期
-            if ($value['expire_time'] >= 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
+            if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
                 return false;
             }
             $value['expire_time'] = -1;

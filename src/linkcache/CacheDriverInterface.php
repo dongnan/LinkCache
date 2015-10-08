@@ -20,7 +20,7 @@ interface CacheDriverInterface {
      * 设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,永不过期
+     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
      * @return boolean      是否成功
      */
     public function set($key, $value, $time = -1);
@@ -29,7 +29,7 @@ interface CacheDriverInterface {
      * 当键名不存在时设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,永不过期
+     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
      * @return boolean      是否成功
      */
     public function setnx($key, $value, $time = -1);
@@ -91,7 +91,7 @@ interface CacheDriverInterface {
     /**
      * 设置过期时间
      * @param string $key   键名
-     * @param int $time     过期时间(单位:秒)
+     * @param int $time     过期时间(单位:秒)。不大于0，则设为永不过期
      * @return boolean      是否成功
      */
     public function expire($key, $time);
