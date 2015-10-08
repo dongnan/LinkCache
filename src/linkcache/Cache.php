@@ -26,7 +26,7 @@ class Cache {
      * @var array 
      */
     static protected $config = [
-        'default' => '',
+        'default' => 'files',
         //当前缓存驱动失效时，采用的备份驱动
         'fallback' => 'files',
         'memcache' => [
@@ -77,6 +77,9 @@ class Cache {
      * @throws \Exception   异常
      */
     public function __construct($type = '', $config = []) {
+        if (empty($type)) {
+            $type = self::$config['default'] ? : 'files';
+        }
         $key = $type . md5(serialize($config));
         if (!isset(self::$_drivers[$key])) {
             $class = strpos($type, '\\') ? $type : 'linkcache\\drivers\\' . ucwords(strtolower($type));
