@@ -59,6 +59,34 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
         $this->config = $config;
         $this->connect();
     }
+    
+    public function __set($name, $value) {
+        return $this->handler->set($name, $value);
+    }
+
+    public function __get($name) {
+        return $this->handler->get($name);
+    }
+
+    public function __unset($name) {
+        $this->handler->del($name);
+    }
+
+    /**
+     * Call the redis handler's method
+     * @param string $method
+     * @param array $args
+     * @return mixed
+     * @throws \Exception
+     */
+    public function __call($method, $args) {
+
+        if (method_exists($this->handler, $method)) {
+            return call_user_func_array(array($this->handler, $method), $args);
+        } else {
+            throw new \Exception(__CLASS__ . ":{$method} is not exists!");
+        }
+    }
 
     /**
      * 连接redis
@@ -319,12 +347,9 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
     public function ttl($key) {
         if ($this->checkConnection()) {
             try {
-                if ($this->handler->exists(self::timeKey($key))) {
-                    $time = time();
-                    $expireTime = $this->handler->get(self::timeKey($key));
-                    if ($expireTime) {
-                        return $expireTime > $time ? $expireTime - $time : -2;
-                    }
+                $expireTime = $this->handler->get(self::timeKey($key));
+                if ($expireTime) {
+                    return $expireTime > time() ? $expireTime - time() : -2;
                 }
                 return $this->handler->ttl($key);
             } catch (RedisException $ex) {
