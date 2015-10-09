@@ -15,9 +15,9 @@ use linkcache\CacheDriverInterface;
 use linkcache\CacheDriverSimpleInterface;
 
 /**
- * CacheDriverSimple
+ * CacheDriverSimpleAbstract
  */
-abstract class CacheDriverSimple implements CacheDriverSimpleInterface, CacheDriverInterface {
+abstract class CacheDriverSimpleAbstract implements CacheDriverSimpleInterface, CacheDriverInterface {
 
     use \linkcache\CacheDriverTrait;
 

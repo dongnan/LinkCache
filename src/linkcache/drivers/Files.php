@@ -11,12 +11,12 @@
 
 namespace linkcache\drivers;
 
-use linkcache\CacheDriverSimple;
+use linkcache\CacheDriverSimpleAbstract;
 
 /**
  * Files
  */
-class Files extends CacheDriverSimple {
+class Files extends CacheDriverSimpleAbstract {
 
     /**
      * 配置信息
