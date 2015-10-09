@@ -5,7 +5,7 @@
  *
  * @author      Dong Nan <hidongnan@gmail.com>
  * @copyright   (c) Dong Nan http://idongnan.cn All rights reserved.
- * @link        https://github.com/dongnan/linkcache
+ * @link        http://git.oschina.net/dongnan/LinkCache
  * @license     BSD (http://www.freebsd.org/copyright/freebsd-license.html)
  */
 
@@ -45,7 +45,7 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
      * @var boolean
      */
     private $fallback = false;
-    
+
     /**
      * 压缩参数
      * @var int
@@ -97,7 +97,7 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
         //如果获取服务器池的统计信息返回false,说明服务器池中有不可用服务器
         if ($this->handler->getStats() === false) {
             $this->isConnected = false;
-        }else{
+        } else {
             $this->isConnected = true;
         }
     }
@@ -127,7 +127,7 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
     public function getHandler() {
         return $this->handler;
     }
-    
+
     /**
      * 根据键值获取压缩参数
      * @param mixed $value
@@ -136,13 +136,13 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
     private function compress($value) {
         if ($this->compress) {
             //如果是数字,则不压缩
-            if(is_numeric($value)){
+            if (is_numeric($value)) {
                 return 0;
             }
         }
         return $this->compress;
     }
-    
+
     /**
      * 设置键值
      * @param string $key   键名
@@ -641,4 +641,5 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
             return self::backup()->mGet($keys);
         }
     }
+
 }

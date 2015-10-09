@@ -550,7 +550,7 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
         if ($this->checkConnection()) {
             try {
                 $values = $this->handler->mget($keys);
-                if(!$values){
+                if (!$values) {
                     return false;
                 }
                 return array_combine($keys, $values);

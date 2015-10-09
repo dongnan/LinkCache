@@ -83,7 +83,7 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
         //如果获取服务器池的统计信息返回false,说明服务器池中有不可用服务器
         if ($this->handler->getStats() === false) {
             $this->isConnected = false;
-        }else{
+        } else {
             $this->isConnected = true;
         }
     }
@@ -585,4 +585,5 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
             return self::backup()->mGet($keys);
         }
     }
+
 }
