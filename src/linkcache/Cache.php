@@ -346,22 +346,20 @@ class Cache {
         if (method_exists($this->driver, 'mSetNX')) {
             return $this->driver->mSetNX($sets);
         } else {
-            $newSets = [];
+            $keys = [];
             $status = true;
             foreach ($sets as $key => $value) {
                 $status = $this->driver->setnx($key, $value);
                 if ($status) {
-                    $newSets[$key] = $value;
+                    $keys[] = $key;
                 } else {
                     break;
                 }
             }
             //如果失败，尝试回滚，但不保证成功
             if (!$status) {
-                foreach ($newSets as $key => $value) {
-                    if ($value === false) {
-                        $this->driver->del($key);
-                    }
+                foreach ($keys as $key) {
+                    $this->driver->del($key);
                 }
             }
             return $status;
@@ -379,7 +377,7 @@ class Cache {
         } else {
             $values = [];
             foreach ($keys as $key) {
-                $values[] = $this->driver->get($key);
+                $values[$key] = $this->driver->get($key);
             }
             return $values;
         }

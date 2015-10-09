@@ -83,6 +83,8 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
         //如果获取服务器池的统计信息返回false,说明服务器池中有不可用服务器
         if ($this->handler->getStats() === false) {
             $this->isConnected = false;
+        }else{
+            $this->isConnected = true;
         }
     }
 
@@ -133,12 +135,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return $this->handler->set($key, $value);
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->set($key, $value, $time);
+                return self::backup()->set($key, $value, $time);
             }
         } else {
-            return $this->backup()->set($key, $value, $time);
+            return self::backup()->set($key, $value, $time);
         }
     }
 
@@ -166,12 +169,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return $this->handler->add($key, $value);
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->setnx($key, $value, $time);
+                return self::backup()->setnx($key, $value, $time);
             }
         } else {
-            return $this->backup()->setnx($key, $value, $time);
+            return self::backup()->setnx($key, $value, $time);
         }
     }
 
@@ -191,12 +195,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 $value = $this->handler->get($key);
                 return $this->getValue($value);
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->get($key);
+                return self::backup()->get($key);
             }
         } else {
-            return $this->backup()->get($key);
+            return self::backup()->get($key);
         }
     }
 
@@ -212,12 +217,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 $value = $this->handler->get($key);
                 return $this->getValue($value);
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->getTwice($key);
+                return self::backup()->getTwice($key);
             }
         } else {
-            return $this->backup()->getTwice($key);
+            return self::backup()->getTwice($key);
         }
     }
 
@@ -234,12 +240,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return $this->handler->set(self::lockKey($key), 1, time() + $time);
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->lock($key, $time);
+                return self::backup()->lock($key, $time);
             }
         } else {
-            return $this->backup()->lock($key, $time);
+            return self::backup()->lock($key, $time);
         }
     }
 
@@ -254,12 +261,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return (boolean) $this->handler->get(self::lockKey($key));
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->isLock($key);
+                return self::backup()->isLock($key);
             }
         } else {
-            return $this->backup()->isLock($key);
+            return self::backup()->isLock($key);
         }
     }
 
@@ -274,12 +282,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 $this->handler->delete(self::timeKey($key));
                 return $this->handler->delete($key);
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->del($key);
+                return self::backup()->del($key);
             }
         } else {
-            return $this->backup()->del($key);
+            return self::backup()->del($key);
         }
     }
 
@@ -297,12 +306,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return true;
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->has($key);
+                return self::backup()->has($key);
             }
         } else {
-            return $this->backup()->has($key);
+            return self::backup()->has($key);
         }
     }
 
@@ -325,12 +335,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                     return -1;
                 }
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->ttl($key);
+                return self::backup()->ttl($key);
             }
         } else {
-            return $this->backup()->ttl($key);
+            return self::backup()->ttl($key);
         }
     }
 
@@ -351,8 +362,8 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 //设为永不过期
                 if ($time <= 0) {
                     if ($this->handler->set($key, $value)) {
-                        $res = $this->handler->delete(self::timeKey($key));
-                        if ($res === false && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
+                        $ret = $this->handler->delete(self::timeKey($key));
+                        if ($ret === false && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
                             return false;
                         }
                         return true;
@@ -361,12 +372,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], time() + $time * 2);
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->expire($key, $time);
+                return self::backup()->expire($key, $time);
             }
         } else {
-            return $this->backup()->expire($key, $time);
+            return self::backup()->expire($key, $time);
         }
     }
 
@@ -383,20 +395,22 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                     return false;
                 }
                 if ($this->handler->set($key, $value)) {
-                    $res = $this->handler->delete(self::timeKey($key));
-                    if ($res === false && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
+                    $ret = $this->handler->delete(self::timeKey($key));
+                    //如果删除失败，且失败原因不是key未找到，则返回false
+                    if ($ret === false && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
                         return false;
                     }
                     return true;
                 }
                 return false;
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->has($key);
+                return self::backup()->has($key);
             }
         } else {
-            return $this->backup()->has($key);
+            return self::backup()->has($key);
         }
     }
 
@@ -412,23 +426,20 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 return false;
             }
             try {
-                $res = $this->handler->increment($key, $step);
+                $ret = $this->handler->increment($key, $step);
                 //如果key不存在
-                if (!$res && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
-                    $expire = $this->handler->get(self::timeKey($key));
-                    if ($expire > 0) {
-                        return $this->handler->set($key, $step, $expire);
-                    }
+                if (!$ret && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
                     return $this->handler->set($key, $step);
                 }
-                return $res;
+                return $ret;
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->incr($key, $step);
+                return self::backup()->incr($key, $step);
             }
         } else {
-            return $this->backup()->incr($key, $step);
+            return self::backup()->incr($key, $step);
         }
     }
 
@@ -454,12 +465,13 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return $this->handler->set($key, $value + $float);
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->incrByFloat($key, $float);
+                return self::backup()->incrByFloat($key, $float);
             }
         } else {
-            return $this->backup()->incrByFloat($key, $float);
+            return self::backup()->incrByFloat($key, $float);
         }
     }
 
@@ -475,23 +487,20 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
                 return false;
             }
             try {
-                $res = $this->handler->decrement($key, $step);
+                $ret = $this->handler->decrement($key, $step);
                 //如果key不存在
-                if (!$res && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
-                    $expire = $this->handler->get(self::timeKey($key));
-                    if ($expire > 0) {
-                        return $this->handler->set($key, -$step, $expire);
-                    }
+                if (!$ret && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
                     return $this->handler->set($key, -$step);
                 }
-                return $res;
+                return $ret;
             } catch (Exception $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->decr($key, $step);
+                return self::backup()->decr($key, $step);
             }
         } else {
-            return $this->backup()->decr($key, $step);
+            return self::backup()->decr($key, $step);
         }
     }
 
@@ -500,7 +509,20 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @param array $sets   键值数组
      * @return boolean      是否成功
      */
-    public function mSet($sets);
+    public function mSet($sets) {
+        if ($this->checkConnection()) {
+            try {
+                return $this->handler->setMulti($sets);
+            } catch (Exception $ex) {
+                self::exception($ex);
+                //连接状态置为false
+                $this->isConnected = false;
+                return self::backup()->mSet($sets);
+            }
+        } else {
+            return self::backup()->mSet($sets);
+        }
+    }
 
     /**
      * 批量设置键值(当键名不存在时)
@@ -508,12 +530,59 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @param array $sets   键值数组
      * @return boolean      是否成功
      */
-    public function mSetNX($sets);
+    public function mSetNX($sets) {
+        if ($this->checkConnection()) {
+            try {
+                $keys = [];
+                $status = true;
+                foreach ($sets as $key => $value) {
+                    $status = $this->handler->add($key, $value);
+                    if ($status) {
+                        $keys[] = $key;
+                    } else {
+                        break;
+                    }
+                }
+                //如果失败，尝试回滚，但不保证成功
+                if (!$status) {
+                    foreach ($keys as $key) {
+                        $this->handler->delete($key);
+                    }
+                }
+                return $status;
+            } catch (Exception $ex) {
+                self::exception($ex);
+                //连接状态置为false
+                $this->isConnected = false;
+                return self::backup()->mSetNX($sets);
+            }
+        } else {
+            return self::backup()->mSetNX($sets);
+        }
+    }
 
     /**
      * 批量获取键值
      * @param array $keys   键名数组
      * @return array        键值数组
      */
-    public function mGet($keys);
+    public function mGet($keys) {
+        if ($this->checkConnection()) {
+            try {
+                $ret = [];
+                $values = $this->handler->getMulti($keys);
+                foreach ($keys as $key) {
+                    $ret[$key] = isset($values[$key]) ? $values[$key] : false;
+                }
+                return $ret;
+            } catch (Exception $ex) {
+                self::exception($ex);
+                //连接状态置为false
+                $this->isConnected = false;
+                return self::backup()->mGet($keys);
+            }
+        } else {
+            return self::backup()->mGet($keys);
+        }
+    }
 }

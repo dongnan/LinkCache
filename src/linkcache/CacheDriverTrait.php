@@ -16,14 +16,29 @@ namespace linkcache;
  */
 trait CacheDriverTrait {
 
+    /**
+     * 获取timeKey,过期时间的key
+     * @param string $key
+     * @return string
+     */
     static protected function timeKey($key) {
         return $key . '_time';
     }
 
+    /**
+     * 获取lockKey
+     * @param string $key
+     * @return string
+     */
     static protected function lockKey($key) {
         return $key . '_lock';
     }
 
+    /**
+     * 设置value,用于序列化存储
+     * @param mixed $value
+     * @return mixed
+     */
     static protected function setValue($value) {
         if (!is_numeric($value)) {
             $value = serialize($value);
@@ -31,6 +46,11 @@ trait CacheDriverTrait {
         return $value;
     }
 
+    /**
+     * 获取value,解析可能序列化的值
+     * @param mixed $value
+     * @return mixed
+     */
     static protected function getValue($value) {
         if (!$value) {
             return $value;
@@ -40,12 +60,20 @@ trait CacheDriverTrait {
         }
         return $value;
     }
+    
+    /**
+     * 处理异常信息
+     * @param \Exception $ex
+     */
+    static protected function exception($ex) {
+        
+    }
 
     /**
      * 返回定义为fallback的Cache实例
      * @return Cache
      */
-    protected function backup() {
+    static protected function backup() {
         return Cache::getInstance('fallback');
     }
 

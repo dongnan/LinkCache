@@ -167,12 +167,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return $this->handler->set($key, $value);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->set($key, $value, $time);
+                return self::backup()->set($key, $value, $time);
             }
         } else {
-            return $this->backup()->set($key, $value, $time);
+            return self::backup()->set($key, $value, $time);
         }
     }
 
@@ -203,12 +204,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return $this->handler->setnx($key, $value);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->setnx($key, $value, $time);
+                return self::backup()->setnx($key, $value, $time);
             }
         } else {
-            return $this->backup()->setnx($key, $value, $time);
+            return self::backup()->setnx($key, $value, $time);
         }
     }
 
@@ -228,12 +230,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
                 $value = $this->handler->get($key);
                 return $this->getValue($value);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->get($key);
+                return self::backup()->get($key);
             }
         } else {
-            return $this->backup()->get($key);
+            return self::backup()->get($key);
         }
     }
 
@@ -249,12 +252,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
                 $value = $this->handler->get($key);
                 return $this->getValue($value);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->getTwice($key);
+                return self::backup()->getTwice($key);
             }
         } else {
-            return $this->backup()->getTwice($key);
+            return self::backup()->getTwice($key);
         }
     }
 
@@ -271,12 +275,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return $this->handler->setex(self::lockKey($key), $time, 1);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->lock($key, $time);
+                return self::backup()->lock($key, $time);
             }
         } else {
-            return $this->backup()->lock($key, $time);
+            return self::backup()->lock($key, $time);
         }
     }
 
@@ -291,12 +296,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return $this->handler->exists(self::lockKey($key));
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->isLock($key);
+                return self::backup()->isLock($key);
             }
         } else {
-            return $this->backup()->isLock($key);
+            return self::backup()->isLock($key);
         }
     }
 
@@ -311,12 +317,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
                 $this->handler->del(self::timeKey($key));
                 return $this->handler->del($key);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->del($key);
+                return self::backup()->del($key);
             }
         } else {
-            return $this->backup()->del($key);
+            return self::backup()->del($key);
         }
     }
 
@@ -330,12 +337,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return $this->handler->exists($key);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->has($key);
+                return self::backup()->has($key);
             }
         } else {
-            return $this->backup()->has($key);
+            return self::backup()->has($key);
         }
     }
 
@@ -353,12 +361,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return $this->handler->ttl($key);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->ttl($key);
+                return self::backup()->ttl($key);
             }
         } else {
-            return $this->backup()->ttl($key);
+            return self::backup()->ttl($key);
         }
     }
 
@@ -385,12 +394,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return $ret !== false ? true : false;
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->expire($key, $time);
+                return self::backup()->expire($key, $time);
             }
         } else {
-            return $this->backup()->expire($key, $time);
+            return self::backup()->expire($key, $time);
         }
     }
 
@@ -408,12 +418,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 return false;
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->persist($key);
+                return self::backup()->persist($key);
             }
         } else {
-            return $this->backup()->persist($key);
+            return self::backup()->persist($key);
         }
     }
 
@@ -431,12 +442,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return $this->handler->incrBy($key, $step);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->incr($key, $step);
+                return self::backup()->incr($key, $step);
             }
         } else {
-            return $this->backup()->incr($key, $step);
+            return self::backup()->incr($key, $step);
         }
     }
 
@@ -454,12 +466,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return $this->handler->incrByFloat($key, $float);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->incrByFloat($key, $float);
+                return self::backup()->incrByFloat($key, $float);
             }
         } else {
-            return $this->backup()->incrByFloat($key, $float);
+            return self::backup()->incrByFloat($key, $float);
         }
     }
 
@@ -477,12 +490,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return $this->handler->decrBy($key, $step);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->decr($key, $step);
+                return self::backup()->decr($key, $step);
             }
         } else {
-            return $this->backup()->decr($key, $step);
+            return self::backup()->decr($key, $step);
         }
     }
 
@@ -496,12 +510,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return $this->handler->mset($sets);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->mSet($sets);
+                return self::backup()->mSet($sets);
             }
         } else {
-            return $this->backup()->mSet($sets);
+            return self::backup()->mSet($sets);
         }
     }
 
@@ -516,12 +531,13 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 return $this->handler->msetnx($sets);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->mSetNX($sets);
+                return self::backup()->mSetNX($sets);
             }
         } else {
-            return $this->backup()->mSetNX($sets);
+            return self::backup()->mSetNX($sets);
         }
     }
 
@@ -533,14 +549,19 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
     public function mGet($keys) {
         if ($this->checkConnection()) {
             try {
-                return $this->handler->mget($keys);
+                $values = $this->handler->mget($keys);
+                if(!$values){
+                    return false;
+                }
+                return array_combine($keys, $values);
             } catch (RedisException $ex) {
+                self::exception($ex);
                 //连接状态置为false
                 $this->isConnected = false;
-                return $this->backup()->mGet($keys);
+                return self::backup()->mGet($keys);
             }
         } else {
-            return $this->backup()->mGet($keys);
+            return self::backup()->mGet($keys);
         }
     }
 
