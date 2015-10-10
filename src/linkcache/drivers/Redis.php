@@ -92,11 +92,11 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
      * 连接redis
      */
     private function connect() {
-        $host = isset($this->config['host']) ? $this->config['host'] : '127.0.0.1';
-        $port = isset($this->config['port']) ? $this->config['port'] : 6379;
-        $password = isset($this->config['password']) ? $this->config['password'] : '';
-        $database = isset($this->config['database']) ? $this->config['database'] : 0;
-        $timeout = isset($this->config['timeout']) ? $this->config['timeout'] : 1;
+        $host = !empty($this->config['host']) ? $this->config['host'] : '127.0.0.1';
+        $port = !empty($this->config['port']) ? $this->config['port'] : 6379;
+        $password = !empty($this->config['password']) ? $this->config['password'] : '';
+        $database = !empty($this->config['database']) ? $this->config['database'] : 0;
+        $timeout = !empty($this->config['timeout']) ? $this->config['timeout'] : 1;
         $persistent = isset($this->config['persistent']) ? $this->config['persistent'] : false;
         $func = $persistent ? 'pconnect' : 'connect';
         if (empty($timeout)) {
