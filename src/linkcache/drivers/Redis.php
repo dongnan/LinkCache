@@ -432,7 +432,7 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
      * 递增
      * @param string $key   键名
      * @param int $step     递增步长
-     * @return boolean      是否成功
+     * @return int|false    递增后的值,失败返回false
      */
     public function incr($key, $step = 1) {
         if ($this->checkConnection()) {
@@ -456,7 +456,7 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
      * 浮点数递增
      * @param string $key   键名
      * @param float $float  递增步长
-     * @return boolean      是否成功
+     * @return float|false  递增后的值,失败返回false
      */
     public function incrByFloat($key, $float) {
         if ($this->checkConnection()) {
@@ -480,7 +480,7 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
      * 递减
      * @param string $key   键名
      * @param int $step     递减步长
-     * @return boolean      是否成功
+     * @return int|false    递减后的值,失败返回false
      */
     public function decr($key, $step = 1) {
         if ($this->checkConnection()) {

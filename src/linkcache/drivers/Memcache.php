@@ -455,7 +455,7 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
      * 递增
      * @param string $key   键名
      * @param int $step     递增步长
-     * @return boolean      是否成功
+     * @return int|false    递增后的值,失败返回false
      */
     public function incr($key, $step = 1) {
         if ($this->checkConnection()) {
@@ -465,8 +465,11 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 $ret = $this->handler->increment($key, $step);
                 //如果key不存在
-                if (!$ret && !$this->has($key)) {
-                    return $this->handler->set($key, $step, 0);
+                if ($ret === false && !$this->has($key)) {
+                    if ($this->handler->set($key, $step, 0)) {
+                        return $step;
+                    }
+                    return false;
                 }
                 return $ret;
             } catch (Exception $ex) {
@@ -484,7 +487,7 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
      * 浮点数递增
      * @param string $key   键名
      * @param float $float  递增步长
-     * @return boolean      是否成功
+     * @return float|false  递增后的值,失败返回false
      */
     public function incrByFloat($key, $float) {
         if ($this->checkConnection()) {
@@ -498,9 +501,15 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
                 }
                 $expire = $this->handler->get(self::timeKey($key));
                 if ($expire > 0) {
-                    return $this->handler->set($key, $value + $float, 0, $expire);
+                    if ($this->handler->set($key, $value += $float, 0, $expire)) {
+                        return $value;
+                    }
+                    return false;
                 }
-                return $this->handler->set($key, $value + $float, 0);
+                if ($this->handler->set($key, $value += $float, 0)) {
+                    return $value;
+                }
+                return false;
             } catch (Exception $ex) {
                 self::exception($ex);
                 //连接状态置为false
@@ -516,7 +525,7 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
      * 递减
      * @param string $key   键名
      * @param int $step     递减步长
-     * @return boolean      是否成功
+     * @return int|false    递减后的值,失败返回false
      */
     public function decr($key, $step = 1) {
         if ($this->checkConnection()) {
@@ -526,8 +535,11 @@ class Memcache implements CacheDriverInterface, CacheDriverExtendInterface {
             try {
                 $ret = $this->handler->decrement($key, $step);
                 //如果key不存在
-                if (!$ret && !$this->has($key)) {
-                    return $this->handler->set($key, -$step, 0);
+                if ($ret === false && !$this->has($key)) {
+                    if ($this->handler->set($key, -$step, 0)) {
+                        return -$step;
+                    }
+                    return false;
                 }
                 return $ret;
             } catch (Exception $ex) {

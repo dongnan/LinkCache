@@ -254,7 +254,7 @@ class Cache {
      * 递增
      * @param string $key   键名
      * @param int $step     递增步长
-     * @return boolean      是否成功
+     * @return int|false    递增后的值,失败返回false
      */
     public function incr($key, $step = 1) {
         if (method_exists($this->driver, 'incr')) {
@@ -264,7 +264,10 @@ class Cache {
             if (!is_int($value) || !is_int($step)) {
                 return false;
             }
-            return $this->driver->set($key, $value + $step);
+            if ($this->driver->set($key, $value += $step)) {
+                return $value;
+            }
+            return false;
         }
     }
 
@@ -272,7 +275,7 @@ class Cache {
      * 浮点数递增
      * @param string $key   键名
      * @param float $float  递增步长
-     * @return boolean      是否成功
+     * @return float|false  递增后的值,失败返回false
      */
     public function incrByFloat($key, $float) {
         if (method_exists($this->driver, 'incrByFloat')) {
@@ -282,7 +285,10 @@ class Cache {
             if (!is_numeric($value) || !is_numeric($float)) {
                 return false;
             }
-            return $this->driver->set($key, $value + $float);
+            if ($this->driver->set($key, $value += $float)) {
+                return $value;
+            }
+            return false;
         }
     }
 
@@ -290,7 +296,7 @@ class Cache {
      * 递减
      * @param string $key   键名
      * @param int $step     递减步长
-     * @return boolean      是否成功
+     * @return int|false    递减后的值,失败返回false
      */
     public function decr($key, $step = 1) {
         if (method_exists($this->driver, 'decr')) {
@@ -300,7 +306,10 @@ class Cache {
             if (!is_int($value) || !is_int($step)) {
                 return false;
             }
-            return $this->driver->set($key, $value - $step);
+            if ($this->driver->set($key, $value -= $step)) {
+                return $value;
+            }
+            return false;
         }
     }
 
