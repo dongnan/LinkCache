@@ -60,7 +60,7 @@ trait CacheDriverTrait {
         }
         return $value;
     }
-    
+
     /**
      * 处理异常信息
      * @param \Exception $ex
@@ -75,6 +75,14 @@ trait CacheDriverTrait {
      */
     static protected function backup() {
         return Cache::getInstance('fallback');
+    }
+
+    /**
+     * 加载扩展
+     * @param string $name
+     */
+    static protected function import($name) {
+        require_once(dirname(__FILE__) . "/_extensions/" . $name);
     }
 
 }
