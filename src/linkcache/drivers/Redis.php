@@ -125,6 +125,7 @@ class Redis implements CacheDriverInterface, CacheDriverExtendInterface {
                     $this->isConnected = true;
                 }
             } catch (RedisException $ex) {
+                self::exception($ex);
                 $this->handler->connect();
             }
             if (!$this->isConnected) {

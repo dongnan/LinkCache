@@ -120,6 +120,7 @@ class SSDB implements CacheDriverInterface, CacheDriverExtendInterface {
                     $this->isConnected = true;
                 }
             } catch (\SSDBException $ex) {
+                self::exception($ex);
                 $this->handler->connect();
             }
             if (!$this->isConnected) {
