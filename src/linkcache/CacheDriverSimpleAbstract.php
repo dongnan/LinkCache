@@ -30,7 +30,7 @@ abstract class CacheDriverSimpleAbstract implements CacheDriverSimpleInterface, 
      */
     public function set($key, $value, $time = -1) {
         if ($time > 0) {
-            return $this->setOne($key, self::setValue(['value' => $value, 'write_time' => time(), 'expire_time' => $time]));
+            return $this->setOne($key, self::setValue(['value' => $value, 'write_time' => time(), 'expire_time' => $time]), $time * 2);
         }
         $old = self::getValue($this->getOne($key));
         $old['value'] = $value;
@@ -55,7 +55,7 @@ abstract class CacheDriverSimpleAbstract implements CacheDriverSimpleInterface, 
             }
         }
         if ($toWrite) {
-            return $this->setOne($key, self::setValue(['value' => $value, 'write_time' => time(), 'expire_time' => $time]));
+            return $this->setOne($key, self::setValue(['value' => $value, 'write_time' => time(), 'expire_time' => $time]), $time * 2);
         }
     }
 
@@ -204,7 +204,7 @@ abstract class CacheDriverSimpleAbstract implements CacheDriverSimpleInterface, 
         } else {
             $value['expire_time'] = time() - $value['write_time'] + $time;
         }
-        return $this->setOne($key, self::setValue($value));
+        return $this->setOne($key, self::setValue($value), $time * 2);
     }
 
     /**
