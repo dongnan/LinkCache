@@ -172,7 +172,7 @@ class Memcache implements Base, Lock, Incr, Multi {
             }
             //如果存在timeKey且已过期，则删除timeKey
             $expireTime = $this->handler->get(self::timeKey($key));
-            if (($expireTime && $expireTime - time() <= 0) || $time == 0) {
+            if ($expireTime > 0 && $expireTime <= time() || $time == 0) {
                 $this->handler->delete(self::timeKey($key));
             }
             return $this->handler->set($key, $value, $this->compress($value));
@@ -223,7 +223,7 @@ class Memcache implements Base, Lock, Incr, Multi {
         try {
             $expireTime = $this->handler->get(self::timeKey($key));
             //如果过期，则返回false
-            if ($expireTime && $expireTime - time() <= 0) {
+            if ($expireTime > 0 && $expireTime <= time()) {
                 return false;
             }
             $value = $this->handler->get($key);

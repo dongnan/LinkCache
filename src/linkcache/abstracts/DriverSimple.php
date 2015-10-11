@@ -30,9 +30,12 @@ abstract class DriverSimple implements Simple, Base {
      */
     public function set($key, $value, $time = -1) {
         if ($time > 0) {
-            return $this->setOne($key, self::setValue(['value' => $value, 'write_time' => time(), 'expire_time' => $time]), $time * 2);
+            return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time * 2);
         }
         $old = self::getValue($this->getOne($key));
+        if (empty($old) || $time == 0) {
+            return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => -1]));
+        }
         $old['value'] = $value;
         return $this->setOne($key, self::setValue($old));
     }
@@ -47,15 +50,15 @@ abstract class DriverSimple implements Simple, Base {
     public function setnx($key, $value, $time = -1) {
         $toWrite = true;
         $old = self::getValue($this->getOne($key));
-        if (!empty($old) && isset($old['expire_time']) && isset($old['write_time']) && isset($old['value'])) {
+        if (!empty($old) && isset($old['expire_time']) && isset($old['value'])) {
             $toWrite = false;
             //已过期
-            if ($old['expire_time'] > 0 && ($old['write_time'] + $old['expire_time']) <= time()) {
+            if ($old['expire_time'] > 0 && $old['expire_time'] <= time()) {
                 $toWrite = true;
             }
         }
         if ($toWrite) {
-            return $this->setOne($key, self::setValue(['value' => $value, 'write_time' => time(), 'expire_time' => $time]), $time * 2);
+            return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time * 2);
         }
     }
 
@@ -66,11 +69,11 @@ abstract class DriverSimple implements Simple, Base {
      */
     public function get($key) {
         $value = self::getValue($this->getOne($key));
-        if (empty($value) || !isset($value['expire_time']) || !isset($value['write_time']) || !isset($value['value'])) {
+        if (empty($value) || !isset($value['expire_time']) || !isset($value['value'])) {
             return false;
         }
         //已过期
-        if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
+        if ($value['expire_time'] > 0 && $value['expire_time'] <= time()) {
             return false;
         }
         return $value['value'];
@@ -84,11 +87,11 @@ abstract class DriverSimple implements Simple, Base {
      */
     public function getTwice($key) {
         $value = self::getValue($this->getOne($key));
-        if (empty($value) || !isset($value['expire_time']) || !isset($value['write_time']) || !isset($value['value'])) {
+        if (empty($value) || !isset($value['expire_time']) || !isset($value['value'])) {
             return false;
         }
         //已过期
-        if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
+        if ($value['expire_time'] > 0 && $value['expire_time'] <= time()) {
             $this->delOne($key);
         }
         return $value['value'];
@@ -110,7 +113,7 @@ abstract class DriverSimple implements Simple, Base {
      */
     public function has($key) {
         $value = self::getValue($this->getOne($key));
-        if (empty($value) || !isset($value['expire_time']) || !isset($value['write_time']) || !isset($value['value'])) {
+        if (empty($value) || !isset($value['expire_time']) || !isset($value['value'])) {
             return false;
         }
         //永不过期
@@ -118,7 +121,7 @@ abstract class DriverSimple implements Simple, Base {
             return true;
         }
         //未过期
-        if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time']) > time()) {
+        if ($value['expire_time'] > 0 && $value['expire_time'] > time()) {
             return true;
         }
         return false;
@@ -132,14 +135,14 @@ abstract class DriverSimple implements Simple, Base {
     public function ttl($key) {
         $value = self::getValue($this->getOne($key));
         //键值不存在,返回 -2
-        if (empty($value) || !isset($value['expire_time']) || !isset($value['write_time']) || !isset($value['value'])) {
+        if (empty($value) || !isset($value['expire_time']) || !isset($value['value'])) {
             return -2;
         }
         //永不过期
         if ($value['expire_time'] <= 0) {
             return -1;
         }
-        $ttl = time() - ($value['write_time'] + $value['expire_time']);
+        $ttl = $value['expire_time'] - time();
         if ($ttl > 0) {
             return $ttl;
         }
@@ -158,17 +161,17 @@ abstract class DriverSimple implements Simple, Base {
     public function expire($key, $time) {
         $value = self::getValue($this->getOne($key));
         //键值不存在
-        if (empty($value) || !isset($value['expire_time']) || !isset($value['write_time']) || !isset($value['value'])) {
+        if (empty($value) || !isset($value['expire_time']) || !isset($value['value'])) {
             return false;
         }
         //已过期
-        if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
+        if ($value['expire_time'] > 0 && $value['expire_time'] <= time()) {
             return false;
         }
         if ($time <= 0) {
             $value['expire_time'] = -1;
         } else {
-            $value['expire_time'] = time() - $value['write_time'] + $time;
+            $value['expire_time'] = time() + $time;
         }
         return $this->setOne($key, self::setValue($value), $time * 2);
     }
@@ -181,11 +184,11 @@ abstract class DriverSimple implements Simple, Base {
     public function persist($key) {
         $value = self::getValue($this->getOne($key));
         //键值不存在
-        if (empty($value) || !isset($value['expire_time']) || !isset($value['write_time']) || !isset($value['value'])) {
+        if (empty($value) || !isset($value['expire_time']) || !isset($value['value'])) {
             return false;
         }
         //已过期
-        if ($value['expire_time'] > 0 && ($value['write_time'] + $value['expire_time']) <= time()) {
+        if ($value['expire_time'] > 0 && $value['expire_time'] <= time()) {
             return false;
         }
         $value['expire_time'] = -1;
