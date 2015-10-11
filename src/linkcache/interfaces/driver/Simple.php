@@ -9,12 +9,12 @@
  * @license     BSD (http://www.freebsd.org/copyright/freebsd-license.html)
  */
 
-namespace linkcache;
+namespace linkcache\interfaces\driver;
 
 /**
- * 缓存驱动简化接口
+ * Simple
  */
-interface CacheDriverSimpleInterface {
+interface Simple {
 
     /**
      * 设置键值

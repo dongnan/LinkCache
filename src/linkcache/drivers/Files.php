@@ -11,26 +11,28 @@
 
 namespace linkcache\drivers;
 
-use linkcache\CacheDriverSimpleAbstract;
+use linkcache\abstracts\DriverSimple;
 
 /**
  * Files
  */
-class Files extends CacheDriverSimpleAbstract {
-
-    /**
-     * 配置信息
-     * @var array 
-     */
-    private $config = [];
+class Files extends DriverSimple {
 
     /**
      * 构造函数
      * @param array $config 配置
      */
     public function __construct($config = []) {
-        $this->config = $config;
+        $this->init($config);
         $this->initPath();
+    }
+
+    /**
+     * 检查驱动是否可用
+     * @return boolean      是否可用
+     */
+    public function checkDriver() {
+        return true;
     }
 
     /**

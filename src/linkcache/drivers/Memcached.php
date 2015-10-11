@@ -11,22 +11,18 @@
 
 namespace linkcache\drivers;
 
-use linkcache\CacheDriverInterface;
-use linkcache\CacheDriverExtendInterface;
+use linkcache\interfaces\driver\Base;
+use linkcache\interfaces\driver\Lock;
+use linkcache\interfaces\driver\Incr;
+use linkcache\interfaces\driver\Multi;
 use \Exception;
 
 /**
  * Memcached
  */
-class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
+class Memcached implements Base, Lock, Incr, Multi {
 
-    use \linkcache\CacheDriverTrait;
-
-    /**
-     * 配置信息
-     * @var array 
-     */
-    private $config = [];
+    use \linkcache\traits\CacheDriver;
 
     /**
      * Memcached 对象
@@ -41,10 +37,16 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
     private $isConnected = false;
 
     /**
-     * 是否使用备用缓存
-     * @var boolean
+     * 重连次数
+     * @var int
      */
-    private $fallback = false;
+    private $reConnected = 0;
+
+    /**
+     * 最大重连次数,默认为3次
+     * @var int
+     */
+    private $maxReConnected = 3;
 
     /**
      * 构造函数
@@ -56,7 +58,11 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
             throw new \Exception("memcached extension is not exists!");
         }
         $this->handler = new \Memcached();
-        $this->config = $config;
+        $this->init($config);
+        //最大重连次数
+        if (isset($config['maxReConnected'])) {
+            $this->maxReConnected = (int) $config['maxReConnected'];
+        }
         $this->initServers();
     }
 
@@ -92,15 +98,19 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * 检查连接状态
      * @return boolean
      */
-    private function checkConnection() {
-        if (!$this->isConnected && !$this->fallback) {
+    public function checkDriver() {
+        if (!$this->isConnected && $this->reConnected < $this->maxReConnected) {
             if ($this->handler->getStats() !== false) {
                 $this->isConnected = true;
             } else {
                 $this->handler->initServers();
             }
             if (!$this->isConnected) {
-                $this->fallback = true;
+                $this->reConnected++;
+            }
+            //如果重连成功,重连次数置为0
+            else {
+                $this->reConnected = 0;
             }
         }
         return $this->isConnected;
@@ -122,27 +132,23 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @return boolean      是否成功
      */
     public function set($key, $value, $time = -1) {
-        if ($this->checkConnection()) {
-            $value = self::setValue($value);
-            try {
-                if ($time > 0) {
-                    return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], time() + $time * 2);
-                }
-                //如果存在timeKey且已过期，则删除timeKey
-                $expireTime = $this->handler->get(self::timeKey($key));
-                if (($expireTime && $expireTime - time() <= 0) || $time == 0) {
-                    $this->handler->delete(self::timeKey($key));
-                }
-                return $this->handler->set($key, $value);
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->set($key, $value, $time);
+        $value = self::setValue($value);
+        try {
+            if ($time > 0) {
+                return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], time() + $time * 2);
             }
-        } else {
-            return self::backup()->set($key, $value, $time);
+            //如果存在timeKey且已过期，则删除timeKey
+            $expireTime = $this->handler->get(self::timeKey($key));
+            if (($expireTime && $expireTime - time() <= 0) || $time == 0) {
+                $this->handler->delete(self::timeKey($key));
+            }
+            return $this->handler->set($key, $value);
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
     /**
@@ -153,78 +159,189 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @return boolean      是否成功
      */
     public function setnx($key, $value, $time = -1) {
-        if ($this->checkConnection()) {
-            $value = self::setValue($value);
-            try {
-                if ($time > 0) {
-                    if ($this->handler->add($key, $value, time() + $time * 2)) {
-                        $ret = $this->handler->set(self::timeKey($key), $time + time(), time() + $time * 2);
-                        //如果执行失败，则尝试删除key
-                        if ($ret === false) {
-                            $this->handler->delete($key);
-                        }
-                        return $ret !== false ? true : false;
+        $value = self::setValue($value);
+        try {
+            if ($time > 0) {
+                if ($this->handler->add($key, $value, time() + $time * 2)) {
+                    $ret = $this->handler->set(self::timeKey($key), $time + time(), time() + $time * 2);
+                    //如果执行失败，则尝试删除key
+                    if ($ret === false) {
+                        $this->handler->delete($key);
                     }
-                    return false;
+                    return $ret !== false ? true : false;
                 }
-                return $this->handler->add($key, $value);
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->setnx($key, $value, $time);
+                return false;
             }
-        } else {
-            return self::backup()->setnx($key, $value, $time);
+            return $this->handler->add($key, $value);
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
     /**
      * 获取键值
      * @param string $key   键名
-     * @return mixed        键值
+     * @return mixed|false  键值,失败返回false
      */
     public function get($key) {
-        if ($this->checkConnection()) {
-            try {
-                $expireTime = $this->handler->get(self::timeKey($key));
-                //如果过期，则返回false
-                if ($expireTime && $expireTime - time() <= 0) {
-                    return false;
-                }
-                $value = $this->handler->get($key);
-                return $this->getValue($value);
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->get($key);
+        try {
+            $expireTime = $this->handler->get(self::timeKey($key));
+            //如果过期，则返回false
+            if ($expireTime && $expireTime - time() <= 0) {
+                return false;
             }
-        } else {
-            return self::backup()->get($key);
+            $value = $this->handler->get($key);
+            return $this->getValue($value);
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
     /**
      * 二次获取键值,在get方法没有获取到值时，调用此方法将有可能获取到
      * 此方法是为了防止惊群现象发生,配合lock和isLock方法,设置新的缓存
      * @param string $key   键名
-     * @return mixed        键值
+     * @return mixed|false  键值,失败返回false
      */
     public function getTwice($key) {
-        if ($this->checkConnection()) {
-            try {
-                $value = $this->handler->get($key);
-                return $this->getValue($value);
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->getTwice($key);
-            }
-        } else {
-            return self::backup()->getTwice($key);
+        try {
+            $value = $this->handler->get($key);
+            return $this->getValue($value);
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
+    }
+
+    /**
+     * 删除键值
+     * @param string $key   键名
+     * @return boolean      是否成功
+     */
+    public function del($key) {
+        try {
+            $this->handler->delete(self::timeKey($key));
+            return $this->handler->delete($key);
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 是否存在键值
+     * @param string $key   键名
+     * @return boolean      是否存在
+     */
+    public function has($key) {
+        try {
+            $value = $this->handler->get($key);
+            if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                return false;
+            }
+            return true;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 获取生存剩余时间
+     * @param string $key   键名
+     * @return int|false    生存剩余时间(单位:秒) -1表示永不过期,-2表示键值不存在,失败返回false
+     */
+    public function ttl($key) {
+        try {
+            $expireTime = $this->handler->get(self::timeKey($key));
+            if ($expireTime) {
+                return $expireTime > time() ? $expireTime - time() : -2;
+            }
+            $value = $this->handler->get($key);
+            if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                return -2;
+            } else {
+                return -1;
+            }
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 设置过期时间
+     * @param string $key   键名
+     * @param int $time     过期时间(单位:秒)。不大于0，则设为永不过期
+     * @return boolean      是否成功
+     */
+    public function expire($key, $time) {
+        try {
+            $value = $this->handler->get($key);
+            //值不存在,直接返回 false
+            if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                return false;
+            }
+            //设为永不过期
+            if ($time <= 0) {
+                if ($this->handler->set($key, $value)) {
+                    $ret = $this->handler->delete(self::timeKey($key));
+                    if ($ret === false && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
+                        return false;
+                    }
+                    return true;
+                }
+                return false;
+            }
+            return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], time() + $time * 2);
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 移除指定键值的过期时间
+     * @param string $key   键名
+     * @return boolean      是否成功
+     */
+    public function persist($key) {
+        try {
+            $value = $this->handler->get($key);
+            if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                return false;
+            }
+            if ($this->handler->set($key, $value)) {
+                $ret = $this->handler->delete(self::timeKey($key));
+                //如果删除失败，且失败原因不是key未找到，则返回false
+                if ($ret === false && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
+                    return false;
+                }
+                return true;
+            }
+            return false;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
     }
 
     /**
@@ -236,18 +353,14 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @return boolean      是否成功
      */
     public function lock($key, $time = 60) {
-        if ($this->checkConnection()) {
-            try {
-                return $this->handler->set(self::lockKey($key), 1, time() + $time);
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->lock($key, $time);
-            }
-        } else {
-            return self::backup()->lock($key, $time);
+        try {
+            return $this->handler->set(self::lockKey($key), 1, time() + $time);
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
     /**
@@ -257,161 +370,14 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @return boolean      是否成功
      */
     public function isLock($key) {
-        if ($this->checkConnection()) {
-            try {
-                return (boolean) $this->handler->get(self::lockKey($key));
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->isLock($key);
-            }
-        } else {
-            return self::backup()->isLock($key);
+        try {
+            return (boolean) $this->handler->get(self::lockKey($key));
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
-    }
-
-    /**
-     * 删除键值
-     * @param string $key   键名
-     * @return boolean      是否成功
-     */
-    public function del($key) {
-        if ($this->checkConnection()) {
-            try {
-                $this->handler->delete(self::timeKey($key));
-                return $this->handler->delete($key);
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->del($key);
-            }
-        } else {
-            return self::backup()->del($key);
-        }
-    }
-
-    /**
-     * 是否存在键值
-     * @param string $key   键名
-     * @return boolean      是否存在
-     */
-    public function has($key) {
-        if ($this->checkConnection()) {
-            try {
-                $value = $this->handler->get($key);
-                if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
-                    return false;
-                }
-                return true;
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->has($key);
-            }
-        } else {
-            return self::backup()->has($key);
-        }
-    }
-
-    /**
-     * 获取生存剩余时间
-     * @param string $key   键名
-     * @return int          生存剩余时间(单位:秒) -1表示永不过期,-2表示键值不存在
-     */
-    public function ttl($key) {
-        if ($this->checkConnection()) {
-            try {
-                $expireTime = $this->handler->get(self::timeKey($key));
-                if ($expireTime) {
-                    return $expireTime > time() ? $expireTime - time() : -2;
-                }
-                $value = $this->handler->get($key);
-                if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
-                    return -2;
-                } else {
-                    return -1;
-                }
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->ttl($key);
-            }
-        } else {
-            return self::backup()->ttl($key);
-        }
-    }
-
-    /**
-     * 设置过期时间
-     * @param string $key   键名
-     * @param int $time     过期时间(单位:秒)。不大于0，则设为永不过期
-     * @return boolean      是否成功
-     */
-    public function expire($key, $time) {
-        if ($this->checkConnection()) {
-            try {
-                $value = $this->handler->get($key);
-                //值不存在,直接返回 false
-                if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
-                    return false;
-                }
-                //设为永不过期
-                if ($time <= 0) {
-                    if ($this->handler->set($key, $value)) {
-                        $ret = $this->handler->delete(self::timeKey($key));
-                        if ($ret === false && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
-                            return false;
-                        }
-                        return true;
-                    }
-                    return false;
-                }
-                return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], time() + $time * 2);
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->expire($key, $time);
-            }
-        } else {
-            return self::backup()->expire($key, $time);
-        }
-    }
-
-    /**
-     * 移除指定键值的过期时间
-     * @param string $key   键名
-     * @return boolean      是否成功
-     */
-    public function persist($key) {
-        if ($this->checkConnection()) {
-            try {
-                $value = $this->handler->get($key);
-                if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
-                    return false;
-                }
-                if ($this->handler->set($key, $value)) {
-                    $ret = $this->handler->delete(self::timeKey($key));
-                    //如果删除失败，且失败原因不是key未找到，则返回false
-                    if ($ret === false && $this->handler->getResultCode() !== \Memcached::RES_NOTFOUND) {
-                        return false;
-                    }
-                    return true;
-                }
-                return false;
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->has($key);
-            }
-        } else {
-            return self::backup()->has($key);
-        }
+        return false;
     }
 
     /**
@@ -421,29 +387,25 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @return int|false    递增后的值,失败返回false
      */
     public function incr($key, $step = 1) {
-        if ($this->checkConnection()) {
-            if (!is_int($step)) {
+        if (!is_int($step)) {
+            return false;
+        }
+        try {
+            $ret = $this->handler->increment($key, $step);
+            //如果key不存在
+            if ($ret === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                if ($this->handler->set($key, $step)) {
+                    return $step;
+                }
                 return false;
             }
-            try {
-                $ret = $this->handler->increment($key, $step);
-                //如果key不存在
-                if ($ret === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
-                    if ($this->handler->set($key, $step)) {
-                        return $step;
-                    }
-                    return false;
-                }
-                return $ret;
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->incr($key, $step);
-            }
-        } else {
-            return self::backup()->incr($key, $step);
+            return $ret;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
     /**
@@ -453,35 +415,31 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @return float|false  递增后的值,失败返回false
      */
     public function incrByFloat($key, $float) {
-        if ($this->checkConnection()) {
-            if (!is_numeric($float)) {
+        if (!is_numeric($float)) {
+            return false;
+        }
+        try {
+            $value = $this->handler->get($key);
+            if (!is_numeric($value) || !is_numeric($float)) {
                 return false;
             }
-            try {
-                $value = $this->handler->get($key);
-                if (!is_numeric($value) || !is_numeric($float)) {
-                    return false;
-                }
-                $expire = $this->handler->get(self::timeKey($key));
-                if ($expire > 0) {
-                    if ($this->handler->set($key, $value += $float, $expire)) {
-                        return $value;
-                    }
-                    return false;
-                }
-                if ($this->handler->set($key, $value += $float)) {
+            $expire = $this->handler->get(self::timeKey($key));
+            if ($expire > 0) {
+                if ($this->handler->set($key, $value += $float, $expire)) {
                     return $value;
                 }
                 return false;
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->incrByFloat($key, $float);
             }
-        } else {
-            return self::backup()->incrByFloat($key, $float);
+            if ($this->handler->set($key, $value += $float)) {
+                return $value;
+            }
+            return false;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
     /**
@@ -491,29 +449,25 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @return int|false    递减后的值,失败返回false
      */
     public function decr($key, $step = 1) {
-        if ($this->checkConnection()) {
-            if (!is_int($step)) {
+        if (!is_int($step)) {
+            return false;
+        }
+        try {
+            $ret = $this->handler->decrement($key, $step);
+            //如果key不存在
+            if ($ret === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                if ($this->handler->set($key, -$step)) {
+                    return -$step;
+                }
                 return false;
             }
-            try {
-                $ret = $this->handler->decrement($key, $step);
-                //如果key不存在
-                if ($ret === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
-                    if ($this->handler->set($key, -$step)) {
-                        return -$step;
-                    }
-                    return false;
-                }
-                return $ret;
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->decr($key, $step);
-            }
-        } else {
-            return self::backup()->decr($key, $step);
+            return $ret;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
     /**
@@ -522,18 +476,14 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @return boolean      是否成功
      */
     public function mSet($sets) {
-        if ($this->checkConnection()) {
-            try {
-                return $this->handler->setMulti($sets);
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->mSet($sets);
-            }
-        } else {
-            return self::backup()->mSet($sets);
+        try {
+            return $this->handler->setMulti($sets);
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
     /**
@@ -543,59 +493,51 @@ class Memcached implements CacheDriverInterface, CacheDriverExtendInterface {
      * @return boolean      是否成功
      */
     public function mSetNX($sets) {
-        if ($this->checkConnection()) {
-            try {
-                $keys = [];
-                $status = true;
-                foreach ($sets as $key => $value) {
-                    $status = $this->handler->add($key, $value);
-                    if ($status) {
-                        $keys[] = $key;
-                    } else {
-                        break;
-                    }
+        try {
+            $keys = [];
+            $status = true;
+            foreach ($sets as $key => $value) {
+                $status = $this->handler->add($key, $value);
+                if ($status) {
+                    $keys[] = $key;
+                } else {
+                    break;
                 }
-                //如果失败，尝试回滚，但不保证成功
-                if (!$status) {
-                    foreach ($keys as $key) {
-                        $this->handler->delete($key);
-                    }
-                }
-                return $status;
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->mSetNX($sets);
             }
-        } else {
-            return self::backup()->mSetNX($sets);
+            //如果失败，尝试回滚，但不保证成功
+            if (!$status) {
+                foreach ($keys as $key) {
+                    $this->handler->delete($key);
+                }
+            }
+            return $status;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
     /**
      * 批量获取键值
      * @param array $keys   键名数组
-     * @return array        键值数组
+     * @return array|false  键值数组,失败返回false
      */
     public function mGet($keys) {
-        if ($this->checkConnection()) {
-            try {
-                $ret = [];
-                $values = $this->handler->getMulti($keys);
-                foreach ($keys as $key) {
-                    $ret[$key] = isset($values[$key]) ? $values[$key] : false;
-                }
-                return $ret;
-            } catch (Exception $ex) {
-                self::exception($ex);
-                //连接状态置为false
-                $this->isConnected = false;
-                return self::backup()->mGet($keys);
+        try {
+            $ret = [];
+            $values = $this->handler->getMulti($keys);
+            foreach ($keys as $key) {
+                $ret[$key] = isset($values[$key]) ? $values[$key] : false;
             }
-        } else {
-            return self::backup()->mGet($keys);
+            return $ret;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
         }
+        return false;
     }
 
 }

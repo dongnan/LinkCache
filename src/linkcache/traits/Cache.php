@@ -1,7 +1,7 @@
 <?php
 
 /**
- * LinkCache - 一个灵活高效的PHP缓存工具库
+ * linkcache - 一个灵活高效的PHP缓存工具库
  *
  * @author      Dong Nan <hidongnan@gmail.com>
  * @copyright   (c) Dong Nan http://idongnan.cn All rights reserved.
@@ -9,19 +9,19 @@
  * @license     BSD (http://www.freebsd.org/copyright/freebsd-license.html)
  */
 
-namespace linkcache;
+namespace linkcache\traits;
 
 /**
  * 缓存驱动 trait
  */
-trait CacheDriverTrait {
+trait Cache {
 
     /**
      * 获取timeKey,过期时间的key
      * @param string $key
      * @return string
      */
-    static protected function timeKey($key) {
+    static public function timeKey($key) {
         return $key . '_time';
     }
 
@@ -30,7 +30,7 @@ trait CacheDriverTrait {
      * @param string $key
      * @return string
      */
-    static protected function lockKey($key) {
+    static public function lockKey($key) {
         return $key . '_lock';
     }
 
@@ -39,7 +39,7 @@ trait CacheDriverTrait {
      * @param mixed $value
      * @return mixed
      */
-    static protected function setValue($value) {
+    static public function setValue($value) {
         if (!is_numeric($value)) {
             $value = serialize($value);
         }
@@ -51,7 +51,7 @@ trait CacheDriverTrait {
      * @param mixed $value
      * @return mixed
      */
-    static protected function getValue($value) {
+    static public function getValue($value) {
         if (!$value) {
             return $value;
         }
@@ -65,23 +65,15 @@ trait CacheDriverTrait {
      * 处理异常信息
      * @param \Exception $ex
      */
-    static protected function exception($ex) {
+    static public function exception($ex) {
         
-    }
-
-    /**
-     * 返回定义为fallback的Cache实例
-     * @return Cache
-     */
-    static protected function backup() {
-        return Cache::getInstance('fallback');
     }
 
     /**
      * 加载扩展
      * @param string $name
      */
-    static protected function import($name) {
+    static public function import($name) {
         require_once(dirname(__FILE__) . "/_extensions/" . $name);
     }
 
