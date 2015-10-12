@@ -342,7 +342,7 @@ class Cache {
     public function isLock($key) {
         if ($this->driver->checkDriver()) {
             if (method_exists($this->driver, 'isLock')) {
-                return $this->driver->isLock($key, $time);
+                return $this->driver->isLock($key);
             } else {
                 return $this->driver->has(self::lockKey($key));
             }
