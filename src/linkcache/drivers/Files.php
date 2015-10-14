@@ -74,7 +74,7 @@ class Files extends DriverSimple {
      * @param string $value
      * @return boolean
      */
-    public function setOne($key, $value) {
+    protected function setOne($key, $value) {
         $path = $this->hashPath($key);
         if ($path !== false) {
             return file_put_contents($key, $value, LOCK_EX);
@@ -87,7 +87,7 @@ class Files extends DriverSimple {
      * @param string $key
      * @return mixed
      */
-    public function getOne($key) {
+    protected function getOne($key) {
         $path = $this->hashPath($key);
         if ($path !== false) {
             if (!file_exists($path)) {
@@ -103,7 +103,7 @@ class Files extends DriverSimple {
      * @param string $key
      * @return boolean
      */
-    public function delOne($key) {
+    protected function delOne($key) {
         $path = $this->hashPath($key);
         if ($path !== false) {
             if (!file_exists($path)) {

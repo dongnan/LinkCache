@@ -12,14 +12,35 @@
 namespace linkcache\abstracts;
 
 use linkcache\interfaces\driver\Base;
-use linkcache\interfaces\driver\Simple;
 
 /**
  * DriverSimple
  */
-abstract class DriverSimple implements Simple, Base {
+abstract class DriverSimple implements Base {
 
     use \linkcache\traits\CacheDriver;
+
+    /**
+     * 设置键值
+     * @param string $key   键名
+     * @param mixed $value  键值
+     * @return boolean      是否成功
+     */
+    protected function setOne($key, $value);
+
+    /**
+     * 获取键值
+     * @param string $key   键名
+     * @return mixed        键值
+     */
+    protected function getOne($key);
+
+    /**
+     * 删除键值
+     * @param string $key   键名
+     * @return boolean      是否成功
+     */
+    protected function delOne($key);
 
     /**
      * 设置键值
