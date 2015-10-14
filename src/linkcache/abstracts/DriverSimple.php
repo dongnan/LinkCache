@@ -26,21 +26,21 @@ abstract class DriverSimple implements Base {
      * @param mixed $value  键值
      * @return boolean      是否成功
      */
-    protected function setOne($key, $value);
+    abstract protected function setOne($key, $value);
 
     /**
      * 获取键值
      * @param string $key   键名
      * @return mixed        键值
      */
-    protected function getOne($key);
+    abstract protected function getOne($key);
 
     /**
      * 删除键值
      * @param string $key   键名
      * @return boolean      是否成功
      */
-    protected function delOne($key);
+    abstract protected function delOne($key);
 
     /**
      * 设置键值
