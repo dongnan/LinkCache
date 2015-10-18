@@ -365,7 +365,7 @@ class Cache {
                 return $this->driver->incr($key, $step);
             } else {
                 $value = $this->driver->get($key);
-                if (!is_int($value) || !is_int($step)) {
+                if (($value !== false && !is_int($value)) || !is_int($step)) {
                     return false;
                 }
                 if ($this->driver->set($key, $value += $step)) {
@@ -392,7 +392,7 @@ class Cache {
                 return $this->driver->incrByFloat($key, $float);
             } else {
                 $value = $this->driver->get($key);
-                if (!is_numeric($value) || !is_numeric($float)) {
+                if (($value !== false && !is_numeric($value)) || !is_numeric($float)) {
                     return false;
                 }
                 if ($this->driver->set($key, $value += $float)) {
@@ -419,7 +419,7 @@ class Cache {
                 return $this->driver->decr($key, $step);
             } else {
                 $value = $this->driver->get($key);
-                if (!is_int($value) || !is_int($step)) {
+                if (($value !== false && !is_int($value)) || !is_int($step)) {
                     return false;
                 }
                 if ($this->driver->set($key, $value -= $step)) {
