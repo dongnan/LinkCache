@@ -14,7 +14,20 @@
     "require": {
         "php": ">=5.4.0"
     },
+    "require-dev": {
+        "phpunit/phpunit": "~4.5"
+    },
     "autoload": {
-        "psr-4": {"linkcache\\": "src/linkcache/"}
+        "psr-4": {
+            "linkcache\\": "src/linkcache/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
     }
 }
