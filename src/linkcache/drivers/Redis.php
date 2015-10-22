@@ -281,7 +281,11 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function has($key) {
         try {
-            return $this->handler->exists($key);
+            $expireTime = $this->handler->get(self::timeKey($key));
+            if ($expireTime > 0 || $expireTime == -1) {
+                return true;
+            }
+            return false;
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -406,7 +410,13 @@ class Redis implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            return $this->handler->incrBy($key, $step);
+            if ($this->has($key)) {
+                return $this->handler->incrBy($key, $step);
+            }
+            if ($this->set($key, $step)) {
+                return $step;
+            }
+            return false;
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -426,7 +436,13 @@ class Redis implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            return $this->handler->incrByFloat($key, $float);
+            if ($this->has($key)) {
+                return $this->handler->incrByFloat($key, $float);
+            }
+            if ($this->set($key, $float)) {
+                return $float;
+            }
+            return false;
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -446,7 +462,13 @@ class Redis implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            return $this->handler->decrBy($key, $step);
+            if ($this->has($key)) {
+                return $this->handler->incrBy($key, -$step);
+            }
+            if ($this->set($key, -$step)) {
+                return -$step;
+            }
+            return false;
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false

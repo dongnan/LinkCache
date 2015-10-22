@@ -129,7 +129,15 @@ class Apc implements Base, Multi {
      * @return boolean      是否存在
      */
     public function has($key) {
-        return apc_exists($key);
+        $value = self::getValue(apc_fetch($key));
+        if (empty($value) || !isset($value['expire_time']) || !isset($value['value'])) {
+            return false;
+        }
+        //已过期
+        if ($value['expire_time'] > 0 && $value['expire_time'] <= time()) {
+            return false;
+        }
+        return true;
     }
 
     /**

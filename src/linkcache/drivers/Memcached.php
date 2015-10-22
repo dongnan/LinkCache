@@ -245,6 +245,11 @@ class Memcached implements Base, Lock, Incr, Multi {
      */
     public function has($key) {
         try {
+            $expireTime = $this->handler->get(self::timeKey($key));
+            //如果过期，则返回false
+            if ($expireTime > 0 && $expireTime <= time()) {
+                return false;
+            }
             $value = $this->handler->get($key);
             if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
                 return false;
@@ -391,15 +396,18 @@ class Memcached implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            $ret = $this->handler->increment($key, $step);
-            //如果key不存在
-            if ($ret === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
-                if ($this->handler->set($key, $step)) {
-                    return $step;
-                }
+            $value = $this->handler->get($key);
+            if (!is_int($value)) {
                 return false;
             }
-            return $ret;
+            $expire = $this->handler->get(self::timeKey($key));
+            if ($expire > time()) {
+                return $this->handler->increment($key, $step);
+            }
+            if ($this->handler->set($key, $value += $step)) {
+                return $value;
+            }
+            return false;
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -420,7 +428,7 @@ class Memcached implements Base, Lock, Incr, Multi {
         }
         try {
             $value = $this->handler->get($key);
-            if (!is_numeric($value) || !is_numeric($float)) {
+            if (!is_numeric($value)) {
                 return false;
             }
             $expire = $this->handler->get(self::timeKey($key));
@@ -453,15 +461,18 @@ class Memcached implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            $ret = $this->handler->decrement($key, $step);
-            //如果key不存在
-            if ($ret === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
-                if ($this->handler->set($key, -$step)) {
-                    return -$step;
-                }
+            $value = $this->handler->get($key);
+            if (!is_int($value)) {
                 return false;
             }
-            return $ret;
+            $expire = $this->handler->get(self::timeKey($key));
+            if ($expire > time()) {
+                return $this->handler->decrement($key, $step);
+            }
+            if ($this->handler->set($key, $value -= $step)) {
+                return $value;
+            }
+            return false;
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false

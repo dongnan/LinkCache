@@ -276,7 +276,11 @@ class SSDB implements Base, Lock, Incr, Multi {
      */
     public function has($key) {
         try {
-            return $this->handler->exists($key);
+            $expireTime = $this->handler->get(self::timeKey($key));
+            if ($expireTime > 0 || $expireTime == -1) {
+                return true;
+            }
+            return false;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -415,7 +419,13 @@ class SSDB implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            return $this->handler->incr($key, $step);
+            if ($this->has($key)) {
+                return $this->handler->incr($key, $step);
+            }
+            if ($this->set($key, $step)) {
+                return $step;
+            }
+            return false;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -436,10 +446,10 @@ class SSDB implements Base, Lock, Incr, Multi {
         }
         try {
             $value = $this->handler->get($key);
-            if (!is_numeric($value) || !is_numeric($float)) {
+            if (!is_numeric($value)) {
                 return false;
             }
-            if ($this->handler->set($key, $value += $float)) {
+            if ($this->set($key, $value += $float)) {
                 return $value;
             }
             return false;
@@ -462,7 +472,13 @@ class SSDB implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            return $this->handler->incr($key, -$step);
+            if ($this->has($key)) {
+                return $this->handler->incr($key, -$step);
+            }
+            if ($this->set($key, -$step)) {
+                return -$step;
+            }
+            return false;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
