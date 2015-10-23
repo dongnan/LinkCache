@@ -164,8 +164,8 @@ class Memcache implements Base, Lock, Incr, Multi {
         $value = self::setValue($value);
         try {
             if ($time > 0) {
-                if ($this->handler->set($key, $value, $this->compress($value), time() + $time * 2)) {
-                    $this->handler->set(self::timeKey($key), $time + time(), 0, time() + $time * 2);
+                if ($this->handler->set($key, $value, $this->compress($value), time() + $time)) {
+                    $this->handler->set(self::timeKey($key), $time + time(), 0, time() + $time);
                     return true;
                 }
                 return false;
@@ -195,8 +195,8 @@ class Memcache implements Base, Lock, Incr, Multi {
         $value = self::setValue($value);
         try {
             if ($time > 0) {
-                if ($this->handler->add($key, $value, $this->compress($value), time() + $time * 2)) {
-                    $ret = $this->handler->set(self::timeKey($key), $time + time(), 0, time() + $time * 2);
+                if ($this->handler->add($key, $value, $this->compress($value), time() + $time)) {
+                    $ret = $this->handler->set(self::timeKey($key), $time + time(), 0, time() + $time);
                     //如果执行失败，则尝试删除key
                     if ($ret === false) {
                         $this->handler->delete($key);
@@ -221,31 +221,7 @@ class Memcache implements Base, Lock, Incr, Multi {
      */
     public function get($key) {
         try {
-            $expireTime = $this->handler->get(self::timeKey($key));
-            //如果过期，则返回false
-            if ($expireTime > 0 && $expireTime <= time()) {
-                return false;
-            }
-            $value = $this->handler->get($key);
-            return $this->getValue($value);
-        } catch (Exception $ex) {
-            self::exception($ex);
-            //连接状态置为false
-            $this->isConnected = false;
-        }
-        return false;
-    }
-
-    /**
-     * 二次获取键值,在get方法没有获取到值时，调用此方法将有可能获取到
-     * 此方法是为了防止惊群现象发生,配合lock和isLock方法,设置新的缓存
-     * @param string $key   键名
-     * @return mixed|false  键值,失败返回false
-     */
-    public function getTwice($key) {
-        try {
-            $value = $this->handler->get($key);
-            return $this->getValue($value);
+            return $this->getValue($this->handler->get($key));
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -346,8 +322,8 @@ class Memcache implements Base, Lock, Incr, Multi {
                 return false;
             }
             //设置新的过期时间
-            if ($this->handler->set($key, $value, $this->compress($value), time() + $time * 2)) {
-                $this->handler->set(self::timeKey($key), $time + time(), 0, time() + $time * 2);
+            if ($this->handler->set($key, $value, $this->compress($value), time() + $time)) {
+                $this->handler->set(self::timeKey($key), $time + time(), 0, time() + $time);
                 return true;
             }
             return false;
@@ -469,7 +445,7 @@ class Memcache implements Base, Lock, Incr, Multi {
                 return false;
             }
             $expire = $this->handler->get(self::timeKey($key));
-            if ($expire > 0) {
+            if ($expire > time()) {
                 if ($this->handler->set($key, $value += $float, 0, $expire)) {
                     return $value;
                 }
@@ -524,19 +500,28 @@ class Memcache implements Base, Lock, Incr, Multi {
      * @return boolean      是否成功
      */
     public function mSet($sets) {
-        if (!is_int($step)) {
-            return false;
-        }
         try {
-            $ret = $this->handler->decrement($key, $step);
-            //如果key不存在
-            if ($ret === false && !$this->has($key)) {
-                if ($this->handler->set($key, -$step, 0)) {
-                    return -$step;
+            $oldSets = [];
+            $status = true;
+            foreach ($sets as $key => $value) {
+                $value = self::setValue($value);
+                $oldSets[$key] = $this->handler->get($key);
+                $status = $this->handler->set($key, $value, $this->compress($value));
+                if (!$status) {
+                    break;
                 }
-                return false;
             }
-            return $ret;
+            //如果失败，尝试回滚，但不保证成功
+            if (!$status) {
+                foreach ($oldSets as $key => $value) {
+                    if ($value === false) {
+                        $this->handler->del($key);
+                    } else {
+                        $this->handler->set($key, $value, $this->compress($value));
+                    }
+                }
+            }
+            return $status;
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -556,6 +541,7 @@ class Memcache implements Base, Lock, Incr, Multi {
             $keys = [];
             $status = true;
             foreach ($sets as $key => $value) {
+                $value = self::setValue($value);
                 $status = $this->handler->add($key, $value, $this->compress($value));
                 if ($status) {
                     $keys[] = $key;
@@ -588,7 +574,7 @@ class Memcache implements Base, Lock, Incr, Multi {
             $ret = [];
             $values = $this->handler->get($keys);
             foreach ($keys as $key) {
-                $ret[$key] = isset($values[$key]) ? $values[$key] : false;
+                $ret[$key] = isset($values[$key]) ? self::getValue($values[$key]) : false;
             }
             return $ret;
         } catch (Exception $ex) {

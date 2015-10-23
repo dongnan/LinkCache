@@ -66,7 +66,14 @@ trait Cache {
      * @param \Exception $ex
      */
     static public function exception($ex) {
-        
+        static $logger = null;
+        if(is_null($logger)){
+            if(!class_exists('FileLog')){
+                Cache::import('FileLog.php');
+            }
+            $logger = new \FileLog('exception');
+        }
+        $logger->error('Message:'.$ex->getMessage()."\tTrace:". $ex->getTraceAsString());
     }
 
     /**

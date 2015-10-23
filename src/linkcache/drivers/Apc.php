@@ -53,7 +53,7 @@ class Apc implements Base, Multi {
      */
     public function set($key, $value, $time = -1) {
         if ($time > 0) {
-            return apc_store($key, self::setValue(['value' => $value, 'expire_time' => $time]), $time * 2);
+            return apc_store($key, self::setValue(['value' => $value, 'expire_time' => $time]), $time);
         }
         $old = self::getValue($this->getOne($key));
         if (empty($old) || $time == 0) {
@@ -61,7 +61,7 @@ class Apc implements Base, Multi {
         }
         $old['value'] = $value;
         //如果没有过期，设置过期时间;否则ttl默认为0
-        $ttl = $old['expire_time'] > time() ? ($old['expire_time'] - time()) * 2 : 0;
+        $ttl = $old['expire_time'] > time() ? $old['expire_time'] - time() : 0;
         return apc_store($key, self::setValue($old), $ttl);
     }
 
@@ -74,7 +74,7 @@ class Apc implements Base, Multi {
      */
     public function setnx($key, $value, $time = -1) {
         if ($time > 0) {
-            return apc_add($key, self::setValue(['value' => $value, 'expire_time' => $time]), $time * 2);
+            return apc_add($key, self::setValue(['value' => $value, 'expire_time' => $time]), $time);
         }
         return apc_add($key, self::setValue(['value' => $value, 'expire_time' => -1]));
     }
@@ -186,7 +186,7 @@ class Apc implements Base, Multi {
         } else {
             $value['expire_time'] = time() + $time;
         }
-        return apc_store($key, self::setValue($value), $time * 2);
+        return apc_store($key, self::setValue($value), $time);
     }
 
     /**

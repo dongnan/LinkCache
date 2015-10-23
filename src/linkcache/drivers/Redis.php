@@ -161,21 +161,11 @@ class Redis implements Base, Lock, Incr, Multi {
      * @return boolean      是否成功
      */
     public function set($key, $value, $time = -1) {
-        $value = self::setValue($value);
         try {
             if ($time > 0) {
-                $ret = $this->handler->multi()
-                        ->setex($key, $time * 2, $value) //两倍时间，防止惊群发生
-                        ->setex(self::timeKey($key), $time * 2, $time + time())
-                        ->exec();
-                return $ret !== false ? true : false;
+                return $this->handler->setex($key, $time, self::setValue($value));
             }
-            //如果存在timeKey且已过期，则删除timeKey；如果$time为0，则设置为永不过期
-            $expireTime = $this->handler->get(self::timeKey($key));
-            if ($expireTime > 0 && $expireTime <= time() || $time == 0) {
-                $this->handler->del(self::timeKey($key));
-            }
-            return $this->handler->set($key, $value);
+            return $this->handler->set($key, self::setValue($value));
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -192,14 +182,10 @@ class Redis implements Base, Lock, Incr, Multi {
      * @return boolean      是否成功
      */
     public function setnx($key, $value, $time = -1) {
-        $value = self::setValue($value);
         try {
             if ($time > 0) {
-                if ($this->handler->setnx($key, $value)) {
-                    $ret = $this->handler->multi()
-                            ->expire($key, $time * 2) //两倍时间，防止惊群发生
-                            ->setex(self::timeKey($key), $time * 2, $time + time())
-                            ->exec();
+                if ($this->handler->setnx($key, self::setValue($value))) {
+                    $ret = $this->handler->expire($key, $time);
                     //如果执行失败，则尝试删除key
                     if ($ret === false) {
                         $this->handler->del($key);
@@ -208,7 +194,7 @@ class Redis implements Base, Lock, Incr, Multi {
                 }
                 return false;
             }
-            return $this->handler->setnx($key, $value);
+            return $this->handler->setnx($key, self::setValue($value));
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -224,31 +210,7 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function get($key) {
         try {
-            $expireTime = $this->handler->get(self::timeKey($key));
-            //如果过期，则返回false
-            if ($expireTime > 0 && $expireTime <= time()) {
-                return false;
-            }
-            $value = $this->handler->get($key);
-            return $this->getValue($value);
-        } catch (RedisException $ex) {
-            self::exception($ex);
-            //连接状态置为false
-            $this->isConnected = false;
-        }
-        return false;
-    }
-
-    /**
-     * 二次获取键值,在get方法没有获取到值时，调用此方法将有可能获取到
-     * 此方法是为了防止惊群现象发生,配合lock和isLock方法,设置新的缓存
-     * @param string $key   键名
-     * @return mixed|false  键值,失败返回false
-     */
-    public function getTwice($key) {
-        try {
-            $value = $this->handler->get($key);
-            return $this->getValue($value);
+            return $this->getValue($this->handler->get($key));
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -264,7 +226,6 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function del($key) {
         try {
-            $this->handler->del(self::timeKey($key));
             return $this->handler->del($key);
         } catch (RedisException $ex) {
             self::exception($ex);
@@ -281,11 +242,7 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function has($key) {
         try {
-            $expireTime = $this->handler->get(self::timeKey($key));
-            if ($expireTime > 0 || $expireTime == -1) {
-                return true;
-            }
-            return false;
+            return $this->handler->exists($key);
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -301,10 +258,6 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function ttl($key) {
         try {
-            $expireTime = $this->handler->get(self::timeKey($key));
-            if ($expireTime) {
-                return $expireTime > time() ? $expireTime - time() : -2;
-            }
             return $this->handler->ttl($key);
         } catch (RedisException $ex) {
             self::exception($ex);
@@ -324,17 +277,10 @@ class Redis implements Base, Lock, Incr, Multi {
         try {
             //$time不大于0，则永不过期
             if ($time <= 0) {
-                $ret = $this->handler->multi()
-                        ->persist($key)
-                        ->del(self::timeKey($key))
-                        ->exec();
+                return $this->handler->persist($key);
             } else {
-                $ret = $this->handler->multi()
-                        ->expire($key, $time * 2) //两倍时间，防止惊群发生
-                        ->setex(self::timeKey($key), $time * 2, $time + time())
-                        ->exec();
+                return $this->handler->expire($key, $time);
             }
-            return $ret !== false ? true : false;
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -350,11 +296,7 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function persist($key) {
         try {
-            if ($this->handler->persist($key)) {
-                $this->handler->del(self::timeKey($key));
-                return true;
-            }
-            return false;
+            return $this->handler->persist($key);
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -410,13 +352,7 @@ class Redis implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            if ($this->has($key)) {
-                return $this->handler->incrBy($key, $step);
-            }
-            if ($this->set($key, $step)) {
-                return $step;
-            }
-            return false;
+            return $this->handler->incrBy($key, $step);
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -436,13 +372,7 @@ class Redis implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            if ($this->has($key)) {
-                return $this->handler->incrByFloat($key, $float);
-            }
-            if ($this->set($key, $float)) {
-                return $float;
-            }
-            return false;
+            return $this->handler->incrByFloat($key, $float);
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -462,13 +392,7 @@ class Redis implements Base, Lock, Incr, Multi {
             return false;
         }
         try {
-            if ($this->has($key)) {
-                return $this->handler->incrBy($key, -$step);
-            }
-            if ($this->set($key, -$step)) {
-                return -$step;
-            }
-            return false;
+            return $this->handler->incrBy($key, -$step);
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false

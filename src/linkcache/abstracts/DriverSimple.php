@@ -51,7 +51,7 @@ abstract class DriverSimple implements Base {
      */
     public function set($key, $value, $time = -1) {
         if ($time > 0) {
-            return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time * 2);
+            return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time);
         }
         $old = self::getValue($this->getOne($key));
         if (empty($old) || $time == 0) {
@@ -79,7 +79,7 @@ abstract class DriverSimple implements Base {
             }
         }
         if ($toWrite) {
-            return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time * 2);
+            return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time);
         }
     }
 
@@ -95,25 +95,8 @@ abstract class DriverSimple implements Base {
         }
         //已过期
         if ($value['expire_time'] > 0 && $value['expire_time'] <= time()) {
-            return false;
-        }
-        return $value['value'];
-    }
-
-    /**
-     * 二次获取键值,在get方法没有获取到值时，调用此方法将有可能获取到
-     * 此方法是为了防止惊群现象发生,配合lock和isLock方法,设置新的缓存
-     * @param string $key   键名
-     * @return mixed|false  键值,失败返回false
-     */
-    public function getTwice($key) {
-        $value = self::getValue($this->getOne($key));
-        if (empty($value) || !isset($value['expire_time']) || !isset($value['value'])) {
-            return false;
-        }
-        //已过期
-        if ($value['expire_time'] > 0 && $value['expire_time'] <= time()) {
             $this->delOne($key);
+            return false;
         }
         return $value['value'];
     }
@@ -194,7 +177,7 @@ abstract class DriverSimple implements Base {
         } else {
             $value['expire_time'] = time() + $time;
         }
-        return $this->setOne($key, self::setValue($value), $time * 2);
+        return $this->setOne($key, self::setValue($value), $time);
     }
 
     /**

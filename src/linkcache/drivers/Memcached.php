@@ -132,17 +132,16 @@ class Memcached implements Base, Lock, Incr, Multi {
      * @return boolean      是否成功
      */
     public function set($key, $value, $time = -1) {
-        $value = self::setValue($value);
         try {
             if ($time > 0) {
-                return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], time() + $time * 2);
+                return $this->handler->setMulti([$key => self::setValue($value), self::timeKey($key) => $time + time()], time() + $time);
             }
             //如果存在timeKey且已过期，则删除timeKey
             $expireTime = $this->handler->get(self::timeKey($key));
             if ($expireTime > 0 && $expireTime <= time() || $time == 0) {
                 $this->handler->delete(self::timeKey($key));
             }
-            return $this->handler->set($key, $value);
+            return $this->handler->set($key, self::setValue($value));
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -159,11 +158,10 @@ class Memcached implements Base, Lock, Incr, Multi {
      * @return boolean      是否成功
      */
     public function setnx($key, $value, $time = -1) {
-        $value = self::setValue($value);
         try {
             if ($time > 0) {
-                if ($this->handler->add($key, $value, time() + $time * 2)) {
-                    $ret = $this->handler->set(self::timeKey($key), $time + time(), time() + $time * 2);
+                if ($this->handler->add($key, self::setValue($value), time() + $time)) {
+                    $ret = $this->handler->set(self::timeKey($key), $time + time(), time() + $time);
                     //如果执行失败，则尝试删除key
                     if ($ret === false) {
                         $this->handler->delete($key);
@@ -172,7 +170,7 @@ class Memcached implements Base, Lock, Incr, Multi {
                 }
                 return false;
             }
-            return $this->handler->add($key, $value);
+            return $this->handler->add($key, self::setValue($value));
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -188,31 +186,7 @@ class Memcached implements Base, Lock, Incr, Multi {
      */
     public function get($key) {
         try {
-            $expireTime = $this->handler->get(self::timeKey($key));
-            //如果过期，则返回false
-            if ($expireTime > 0 && $expireTime <= time()) {
-                return false;
-            }
-            $value = $this->handler->get($key);
-            return $this->getValue($value);
-        } catch (Exception $ex) {
-            self::exception($ex);
-            //连接状态置为false
-            $this->isConnected = false;
-        }
-        return false;
-    }
-
-    /**
-     * 二次获取键值,在get方法没有获取到值时，调用此方法将有可能获取到
-     * 此方法是为了防止惊群现象发生,配合lock和isLock方法,设置新的缓存
-     * @param string $key   键名
-     * @return mixed|false  键值,失败返回false
-     */
-    public function getTwice($key) {
-        try {
-            $value = $this->handler->get($key);
-            return $this->getValue($value);
+            return $this->getValue($this->handler->get($key));
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -312,7 +286,7 @@ class Memcached implements Base, Lock, Incr, Multi {
                 }
                 return false;
             }
-            return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], time() + $time * 2);
+            return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], time() + $time);
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -432,7 +406,7 @@ class Memcached implements Base, Lock, Incr, Multi {
                 return false;
             }
             $expire = $this->handler->get(self::timeKey($key));
-            if ($expire > 0) {
+            if ($expire > time()) {
                 if ($this->handler->set($key, $value += $float, $expire)) {
                     return $value;
                 }
