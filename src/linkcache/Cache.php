@@ -199,22 +199,6 @@ class Cache {
     }
 
     /**
-     * 二次获取键值,在get方法没有获取到值时，调用此方法将有可能获取到
-     * 此方法是为了防止惊群现象发生,配合lock和isLock方法,设置新的缓存
-     * @param string $key   键名
-     * @return mixed|false  键值,失败返回false
-     */
-    public function getTwice($key) {
-        if ($this->driver->checkDriver()) {
-            return $this->driver->getTwice($key);
-        }
-        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
-            return $this->driver->backup()->getTwice($key);
-        }
-        return false;
-    }
-
-    /**
      * 删除键值
      * @param string $key   键名
      * @return boolean      是否成功
