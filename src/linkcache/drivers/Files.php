@@ -77,7 +77,10 @@ class Files extends DriverSimple {
     protected function setOne($key, $value) {
         $path = $this->hashPath($key);
         if ($path !== false) {
-            return file_put_contents($key, $value, LOCK_EX);
+            $byte = file_put_contents($path, $value, LOCK_EX);
+            if($byte !== false) {
+                return true;
+            }
         }
         return false;
     }

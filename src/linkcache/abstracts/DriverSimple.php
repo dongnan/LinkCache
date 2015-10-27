@@ -79,8 +79,12 @@ abstract class DriverSimple implements Base {
             }
         }
         if ($toWrite) {
-            return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time);
+            if($time>0){
+                return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time);
+            }
+            return $this->setOne($key, self::setValue(['value' => $value, 'expire_time' => -1]));
         }
+        return false;
     }
 
     /**
