@@ -9,7 +9,7 @@
  * @license     BSD (http://www.freebsd.org/copyright/freebsd-license.html)
  */
 
-namespace tests;
+namespace linkcacheTests;
 
 /**
  * CacheTest

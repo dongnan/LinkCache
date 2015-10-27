@@ -9,6 +9,12 @@ spl_autoload_register(function($class) {
             if (file_exists($filename)) {
                 include $filename;
             }
+        } elseif ($name === 'linkcacheTests') {
+            $class = str_replace('linkcacheTests\\', '', $class);
+            $filename = __DIR__ . '/' . 'tests/' . str_replace('\\', '/', $class) . '.php';
+            if (file_exists($filename)) {
+                include $filename;
+            }
         }
     }
 });
