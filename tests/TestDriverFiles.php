@@ -166,7 +166,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $this->assertTrue($cache->del('mset1'));
         $this->assertTrue($cache->del('mset2'));
         $this->assertTrue($cache->del('mset3'));
-        $this->assertTrue($cache->mSet(['mset1' => 1, 'mset2' => 2, 'mset3' => 3]));
+        $this->assertTrue($cache->mSet(['mset1' => '1', 'mset2' => '2', 'mset3' => '3']));
     }
 
     /**
@@ -177,8 +177,8 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $this->assertTrue($cache->del('msetnx1'));
         $this->assertTrue($cache->del('msetnx2'));
         $this->assertTrue($cache->del('msetnx3'));
-        $this->assertFalse($cache->mSetNX(['mset1' => 1, 'mset2' => 2, 'msetnx3' => 3]));
-        $this->assertTrue($cache->mSetNX(['msetnx1' => 1, 'msetnx2' => 2, 'msetnx3' => 3]));
+        $this->assertFalse($cache->mSetNX(['mset1' => '1', 'mset2' => '2', 'msetnx3' => '3']));
+        $this->assertTrue($cache->mSetNX(['msetnx1' => '1', 'msetnx2' => '2', 'msetnx3' => '3']));
     }
 
     /**
@@ -186,24 +186,9 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
      */
     public function testMGet() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
-        $sets = $cache->mGet(['mset1', 'mset2', 'mset3']);
-        foreach ($sets as &$set) {
-            //Redis 会自动将数字转为字符串，此处做兼容，不做严格验证
-            $set !== false && $set = (int) $set;
-        }
-        $this->assertArraySubset(['mset1' => 1, 'mset2' => 2, 'mset3' => 3], $sets, true);
-        $sets = $cache->mGet(['mset1', 'mset2', 'mset4']);
-        foreach ($sets as &$set) {
-            //Redis 会自动将数字转为字符串，此处做兼容，不做严格验证
-            $set !== false && $set = (int) $set;
-        }
-        $this->assertArraySubset(['mset1' => 1, 'mset2' => 2, 'mset4' => false], $sets, true);
-        $sets = $cache->mGet(['msetnx1', 'msetnx2', 'msetnx3']);
-        foreach ($sets as &$set) {
-            //Redis 会自动将数字转为字符串，此处做兼容，不做严格验证
-            $set !== false && $set = (int) $set;
-        }
-        $this->assertArraySubset(['msetnx1' => 1, 'msetnx2' => 2, 'msetnx3' => 3], $sets, true);
+        $this->assertArraySubset(['mset1' => '1', 'mset2' => '2', 'mset3' => '3'], $cache->mGet(['mset1', 'mset2', 'mset3']), true);
+        $this->assertArraySubset(['mset1' => '1', 'mset2' => '2', 'mset4' => false], $cache->mGet(['mset1', 'mset2', 'mset4']), true);
+        $this->assertArraySubset(['msetnx1' => '1', 'msetnx2' => '2', 'msetnx3' => '3'], $cache->mGet(['msetnx1', 'msetnx2', 'msetnx3']), true);
     }
 
 }
