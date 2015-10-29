@@ -14,13 +14,11 @@ namespace linkcacheTests;
 /**
  * TestDriverFiles
  */
-class TestDriverFiles extends \PHPUnit_Framework_TestCase
-{
+class TestDriverFiles extends \PHPUnit_Framework_TestCase {
 
     protected $cacheDriver = 'files';
 
-    public function testSet()
-    {
+    public function testSet() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->set('test1', 1));
         $this->assertTrue($cache->set('test2', 2, 1));
@@ -31,8 +29,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
     /**
      * @depends testSet
      */
-    public function testGet()
-    {
+    public function testGet() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertEquals(1, $cache->get('test1'));
         $this->assertEquals(2, $cache->get('test2'));
@@ -46,8 +43,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
      * @depends testSet
      * @depends testGet
      */
-    public function testDel()
-    {
+    public function testDel() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testDel'));
         $this->assertFalse($cache->get('testDel'));
@@ -58,16 +54,14 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
     /**
      * @depends testDel
      */
-    public function testSetnx()
-    {
+    public function testSetnx() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->setnx('setnx', 'setnx'));
         $this->assertFalse($cache->setnx('setnx', 'again'));
         $this->assertTrue($cache->setnx('setnx2', 'setnx2', 1));
     }
 
-    public function testHas()
-    {
+    public function testHas() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->set('testHas', 1));
         $this->assertTrue($cache->has('testHas'));
@@ -75,24 +69,21 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
         $this->assertFalse($cache->has('testHas'));
     }
 
-    public function testExpire()
-    {
+    public function testExpire() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testExpire'));
         $this->assertTrue($cache->set('testExpire', 'expire'));
         $this->assertTrue($cache->expire('testExpire', 10));
     }
 
-    public function testExpireAt()
-    {
+    public function testExpireAt() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testExpireAt'));
         $this->assertTrue($cache->set('testExpireAt', 'expireAt'));
         $this->assertTrue($cache->expireAt('testExpireAt', time() + 10));
     }
 
-    public function testPersist()
-    {
+    public function testPersist() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testPersist'));
         $this->assertTrue($cache->set('testPersist', 'persist', 600));
@@ -106,8 +97,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
      * @depends testExpireAt
      * @depends testPersist
      */
-    public function testTtl()
-    {
+    public function testTtl() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertEquals(10, $cache->ttl('testExpire'));
         $this->assertEquals(10, $cache->ttl('testExpireAt'));
@@ -117,8 +107,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
         $this->assertEquals(-2, $cache->ttl('setnx2'));
     }
 
-    public function testLock()
-    {
+    public function testLock() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testLock'));
         $this->assertTrue($cache->lock('testLock'));
@@ -127,8 +116,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
     /**
      * @depends testLock
      */
-    public function testIsLock()
-    {
+    public function testIsLock() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->isLock('testLock'));
         $this->assertFalse($cache->isLock('testNotLock'));
@@ -137,8 +125,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
     /**
      * @depends testSet
      */
-    public function testIncr()
-    {
+    public function testIncr() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('incr'));
         $this->assertEquals(1, $cache->incr('incr'));
@@ -151,8 +138,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
     /**
      * @depends testSet
      */
-    public function testIncrByFloat()
-    {
+    public function testIncrByFloat() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('incrByFloat'));
         $this->assertEquals(1.5, $cache->incrByFloat('incrByFloat', 1.5), '', 0.01);
@@ -165,8 +151,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
     /**
      * @depends testSet
      */
-    public function testDecr()
-    {
+    public function testDecr() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('decr'));
         $this->assertEquals(-1, $cache->decr('decr'));
@@ -176,8 +161,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
         $this->assertFalse($cache->decr('notNum'));
     }
 
-    public function testMSet()
-    {
+    public function testMSet() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('mset1'));
         $this->assertTrue($cache->del('mset2'));
@@ -188,8 +172,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
     /**
      * @depends testMSet
      */
-    public function testMSetNX()
-    {
+    public function testMSetNX() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('msetnx1'));
         $this->assertTrue($cache->del('msetnx2'));
@@ -201,12 +184,26 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase
     /**
      * @depends testMSet
      */
-    public function testMGet()
-    {
+    public function testMGet() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
-        $this->assertArraySubset(['mset1' => 1, 'mset2' => 2, 'mset3' => 3], $cache->mGet(['mset1', 'mset2', 'mset3']), true);
-        $this->assertArraySubset(['mset1' => 1, 'mset2' => 2, 'mset4' => false], $cache->mGet(['mset1', 'mset2', 'mset4']), true);
-        $this->assertArraySubset(['msetnx1' => 1, 'msetnx2' => 2, 'msetnx3' => 3], $cache->mGet(['msetnx1', 'msetnx2', 'msetnx3']), true);
+        $sets = $cache->mGet(['mset1', 'mset2', 'mset3']);
+        foreach ($sets as &$set) {
+            //Redis 会自动将数字转为字符串，此处做兼容，不做严格验证
+            $set !== false && $set = (int) $set;
+        }
+        $this->assertArraySubset(['mset1' => 1, 'mset2' => 2, 'mset3' => 3], $sets, true);
+        $sets = $cache->mGet(['mset1', 'mset2', 'mset4']);
+        foreach ($sets as &$set) {
+            //Redis 会自动将数字转为字符串，此处做兼容，不做严格验证
+            $set !== false && $set = (int) $set;
+        }
+        $this->assertArraySubset(['mset1' => 1, 'mset2' => 2, 'mset4' => false], $sets, true);
+        $sets = $cache->mGet(['msetnx1', 'msetnx2', 'msetnx3']);
+        foreach ($sets as &$set) {
+            //Redis 会自动将数字转为字符串，此处做兼容，不做严格验证
+            $set !== false && $set = (int) $set;
+        }
+        $this->assertArraySubset(['msetnx1' => 1, 'msetnx2' => 2, 'msetnx3' => 3], $sets, true);
     }
 
 }

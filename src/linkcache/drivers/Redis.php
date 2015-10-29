@@ -226,7 +226,10 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function del($key) {
         try {
-            return (boolean) $this->handler->del($key);
+            $ret = $this->handler->del($key);
+            if ($ret !== false) {
+                return true;
+            }
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false

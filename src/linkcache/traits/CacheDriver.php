@@ -47,7 +47,7 @@ trait CacheDriver {
             $this->enableFallback = false;
         } else {
             //默认为fallback,将使用Cache::$config['fallback']作为备用缓存;也可自定义
-            $this->fallback = empty($config['fallback']) ? 'fallback' : $config['fallback'];
+            $this->fallback = empty($config['fallback']) ? 'files' : $config['fallback'];
         }
     }
 
@@ -77,8 +77,8 @@ trait CacheDriver {
      * @return Cache
      */
     public function backup() {
-        $fallback = !empty($this->fallback) ? $this->fallback : 'fallback';
-        return Cache::getInstance($fallback);
+        $fallback = !empty($this->fallback) ? $this->fallback : 'files';
+        return \linkcache\Cache::getInstance($fallback);
     }
 
 }
