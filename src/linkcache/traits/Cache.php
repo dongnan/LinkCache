@@ -73,7 +73,7 @@ trait Cache {
             }
             $logger = new \FileLog('exception');
         }
-        $logger->error('Message:' . $ex->getMessage() . "\tTrace:" . $ex->getTraceAsString());
+        $logger->error('Message:' . $ex->getMessage() . "\nTrace:" . $ex->getTraceAsString() . PHP_EOL);
     }
 
     /**
