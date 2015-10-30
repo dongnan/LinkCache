@@ -14,17 +14,17 @@
  */
 class FileLog {
 
-     //日志等级
-     const DEBUG = 100;
-     const INFO = 200;
-     const NOTICE = 250;
-     const WARNING = 300;
-     const ERROR = 400;
-     const CRITICAL = 500;
-     const ALERT = 550;
-     const EMERGENCY = 600;
-     
-     /**
+    //日志等级
+    const DEBUG = 100;
+    const INFO = 200;
+    const NOTICE = 250;
+    const WARNING = 300;
+    const ERROR = 400;
+    const CRITICAL = 500;
+    const ALERT = 550;
+    const EMERGENCY = 600;
+
+    /**
      * Logging levels from syslog protocol defined in RFC 5424
      * @var array $levels Logging levels
      */
@@ -38,18 +38,19 @@ class FileLog {
         550 => 'ALERT',
         600 => 'EMERGENCY',
     ];
+
     /**
      * 日志名称
      * @var string 
      */
     private $name;
-    
+
     /**
      * 日志路径
      * @var string 
      */
     private $path;
-    
+
     /**
      * 文件句柄
      * @var resource 
@@ -61,7 +62,7 @@ class FileLog {
      * @var int 
      */
     private $minlevel;
-    
+
     /**
      * 构造函数
      * @param string $name 
@@ -69,11 +70,11 @@ class FileLog {
      * @param int $level
      */
     public function __construct($name = null, $path = null, $level = FileLog::DEBUG) {
-        if(empty($name)){
-            $this->name = $name? : 'common';
-        }
+        $this->name = $name? : 'common';
         if (empty($path)) {
             $this->path = (ini_get('upload_tmp_dir') ? ini_get('upload_tmp_dir') : sys_get_temp_dir()) . '/linkcache/logs';
+        } else {
+            $this->path = $path;
         }
         if (!file_exists($this->path)) {
             mkdir($this->path, 0777, true);
@@ -84,16 +85,14 @@ class FileLog {
     /**
      * 析构函数
      */
-    public function __destruct()
-    {
+    public function __destruct() {
         $this->close();
     }
 
     /**
      * 关闭文件句柄
      */
-    public function close()
-    {
+    public function close() {
         if (is_resource($this->stream)) {
             fclose($this->stream);
         }
@@ -108,15 +107,14 @@ class FileLog {
      * @param array $data 日志相关数组数据
      * @return boolean
      */
-    public function log($level, $message, $data = [])
-    {
+    public function log($level, $message, $data = []) {
         //根据最小日志等级记录日志
         if ($level < $this->minlevel) {
             return;
         }
         if (!is_resource($this->stream)) {
-            $logpath = $this->path.date('/Y/md');
-            if(!is_dir($logpath)){
+            $logpath = $this->path . date('/Y/md');
+            if (!is_dir($logpath)) {
                 mkdir($logpath, 0777, true);
             }
             $logfile = "{$logpath}/{$this->name}.log";
@@ -126,7 +124,7 @@ class FileLog {
             }
         }
         $datetime = date('Y-m-d H:i:s');
-        $jsonData = preg_replace('/\s+/', ' ', var_export($data,true)) ;
+        $jsonData = preg_replace('/\s+/', ' ', var_export($data, true));
         $levelName = isset(self::$levels[$level]) ? self::$levels[$level] : $level;
         $output = "[{$datetime}] {$this->name}.{$levelName}: {$message} {$jsonData}" . PHP_EOL;
         fwrite($this->stream, $output);
@@ -139,8 +137,7 @@ class FileLog {
      * @param array $data 日志相关数组数据
      * @return boolean
      */
-    public function debug($message, $data = [])
-    {
+    public function debug($message, $data = []) {
         $this->log(FileLog::DEBUG, $message, $data);
     }
 
@@ -151,8 +148,7 @@ class FileLog {
      * @param array $data 日志相关数组数据
      * @return boolean
      */
-    public function info($message, $data = [])
-    {
+    public function info($message, $data = []) {
         $this->log(FileLog::INFO, $message, $data);
     }
 
@@ -163,8 +159,7 @@ class FileLog {
      * @param array $data 日志相关数组数据
      * @return boolean
      */
-    public function notice($message, $data = [])
-    {
+    public function notice($message, $data = []) {
         $this->log(FileLog::NOTICE, $message, $data);
     }
 
@@ -175,8 +170,7 @@ class FileLog {
      * @param array $data 日志相关数组数据
      * @return boolean
      */
-    public function warning($message, $data = [])
-    {
+    public function warning($message, $data = []) {
         $this->log(FileLog::WARNING, $message, $data);
     }
 
@@ -187,8 +181,7 @@ class FileLog {
      * @param array $data 日志相关数组数据
      * @return boolean
      */
-    public function error($message, $data = [])
-    {
+    public function error($message, $data = []) {
         $this->log(FileLog::ERROR, $message, $data);
     }
 
@@ -199,11 +192,10 @@ class FileLog {
      * @param array $data 日志相关数组数据
      * @return boolean
      */
-    public function critical($message, $data = [])
-    {
+    public function critical($message, $data = []) {
         $this->log(FileLog::CRITICAL, $message, $data);
     }
-    
+
     /**
      * 添加 alert 日志
      * @access public
@@ -211,8 +203,7 @@ class FileLog {
      * @param array $data 日志相关数组数据
      * @return boolean
      */
-    public function alert($message, $data = [])
-    {
+    public function alert($message, $data = []) {
         $this->log(FileLog::ALERT, $message, $data);
     }
 
@@ -223,8 +214,8 @@ class FileLog {
      * @param array $data 日志相关数组数据
      * @return boolean
      */
-    public function emergency($message, $data = [])
-    {
+    public function emergency($message, $data = []) {
         $this->log(FileLog::EMERGENCY, $message, $data);
     }
+
 }
