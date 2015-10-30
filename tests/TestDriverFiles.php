@@ -35,7 +35,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $this->assertEquals(2, $cache->get('test2'));
         $this->assertEquals('del', $cache->get('testDel'));
         $this->assertFalse($cache->get('notExist'));
-        sleep(1);
+        usleep(1500000);
         $this->assertFalse($cache->get('test2'));
     }
 
@@ -69,25 +69,25 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $this->assertFalse($cache->has('testHas'));
     }
 
+    public function testPersist() {
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertTrue($cache->del('testPersist'));
+        $this->assertTrue($cache->set('testPersist', 'persist', 600));
+        $this->assertTrue($cache->persist('testPersist'));
+    }
+
     public function testExpire() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testExpire'));
         $this->assertTrue($cache->set('testExpire', 'expire'));
-        $this->assertTrue($cache->expire('testExpire', 10));
+        $this->assertTrue($cache->expire('testExpire', 1));
     }
 
     public function testExpireAt() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testExpireAt'));
         $this->assertTrue($cache->set('testExpireAt', 'expireAt'));
-        $this->assertTrue($cache->expireAt('testExpireAt', time() + 10));
-    }
-
-    public function testPersist() {
-        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
-        $this->assertTrue($cache->del('testPersist'));
-        $this->assertTrue($cache->set('testPersist', 'persist', 600));
-        $this->assertTrue($cache->persist('testPersist'));
+        $this->assertTrue($cache->expireAt('testExpireAt', time() + 1));
     }
 
     /**
@@ -99,11 +99,11 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
      */
     public function testTtl() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
-        $this->assertEquals(10, $cache->ttl('testExpire'));
-        $this->assertEquals(10, $cache->ttl('testExpireAt'));
+        usleep(1500000);
+        $this->assertEquals(-2, $cache->ttl('testExpire'));
+        $this->assertEquals(-2, $cache->ttl('testExpireAt'));
         $this->assertEquals(-1, $cache->ttl('testPersist'));
         $this->assertEquals(-2, $cache->ttl('testNotExist'));
-        sleep(1);
         $this->assertEquals(-2, $cache->ttl('setnx2'));
     }
 

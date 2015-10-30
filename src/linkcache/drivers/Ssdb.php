@@ -17,9 +17,9 @@ use linkcache\interfaces\driver\Incr;
 use linkcache\interfaces\driver\Multi;
 
 /**
- * SSDB
+ * Ssdb
  */
-class SSDB implements Base, Lock, Incr, Multi {
+class Ssdb implements Base, Lock, Incr, Multi {
 
     use \linkcache\traits\CacheDriver;
 
@@ -66,15 +66,15 @@ class SSDB implements Base, Lock, Incr, Multi {
     }
 
     public function __set($name, $value) {
-        return $this->handler->set($name, $value);
+        return $this->set($name, $value);
     }
 
     public function __get($name) {
-        return $this->handler->get($name);
+        return $this->get($name);
     }
 
     public function __unset($name) {
-        $this->handler->del($name);
+        return $this->del($name);
     }
 
     /**
@@ -158,9 +158,14 @@ class SSDB implements Base, Lock, Incr, Multi {
     public function set($key, $value, $time = -1) {
         try {
             if ($time > 0) {
-                return $this->handler->setx($key, self::setValue($value), $time);
+                $ret = $this->handler->setx($key, self::setValue($value), $time);
+            } else {
+                $ret = $this->handler->set($key, self::setValue($value));
             }
-            return $this->handler->set($key, self::setValue($value));
+            if ($ret !== false) {
+                return true;
+            }
+            return false;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -189,7 +194,12 @@ class SSDB implements Base, Lock, Incr, Multi {
                 }
                 return false;
             }
-            return $this->handler->setnx($key, self::setValue($value));
+            $ret = $this->handler->setnx($key, self::setValue($value));
+            //出错则返回 false, 1:value 已经设置,0:key 已经存在,不更新.
+            if ($ret === 1) {
+                return true;
+            }
+            return false;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -205,7 +215,11 @@ class SSDB implements Base, Lock, Incr, Multi {
      */
     public function get($key) {
         try {
-            return $this->getValue($this->handler->get($key));
+            $value = $this->handler->get($key);
+            if (is_null($value) || $value === false) {
+                return false;
+            }
+            return $this->getValue($value);
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -221,7 +235,11 @@ class SSDB implements Base, Lock, Incr, Multi {
      */
     public function del($key) {
         try {
-            return $this->handler->del($key);
+            $ret = $this->handler->del($key);
+            if ($ret !== false) {
+                return true;
+            }
+            return false;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -237,7 +255,7 @@ class SSDB implements Base, Lock, Incr, Multi {
      */
     public function has($key) {
         try {
-            return $this->handler->exists($key);
+            return (boolean) $this->handler->exists($key);
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -280,9 +298,13 @@ class SSDB implements Base, Lock, Incr, Multi {
             }
             //$time不大于0，则永不过期
             if ($time <= 0) {
-                return $this->handler->set($key, $value);
+                $ret = $this->handler->set($key, $value);
+                if ($ret !== false) {
+                    return true;
+                }
+                return false;
             } else {
-                return $this->handler->expire($key, $time);
+                return (boolean) $this->handler->expire($key, $time);
             }
         } catch (\SSDBException $ex) {
             self::exception($ex);
@@ -303,7 +325,13 @@ class SSDB implements Base, Lock, Incr, Multi {
             if (is_null($value) || $value === false) {
                 return false;
             }
-            return $this->handler->set($key, $value);
+            if ($this->del($key)) {
+                $ret = $this->handler->set($key, $value);
+                if ($ret !== false) {
+                    return true;
+                }
+            }
+            return false;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -322,7 +350,11 @@ class SSDB implements Base, Lock, Incr, Multi {
      */
     public function lock($key, $time = 60) {
         try {
-            return $this->handler->setx(self::lockKey($key), 1, $time);
+            $ret = $this->handler->setx(self::lockKey($key), 1, $time);
+            if ($ret !== false) {
+                return true;
+            }
+            return false;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -339,7 +371,7 @@ class SSDB implements Base, Lock, Incr, Multi {
      */
     public function isLock($key) {
         try {
-            return $this->handler->exists(self::lockKey($key));
+            return (boolean) $this->handler->exists(self::lockKey($key));
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -380,7 +412,8 @@ class SSDB implements Base, Lock, Incr, Multi {
         }
         try {
             $value = $this->handler->get($key);
-            if (!is_numeric($value)) {
+            //存在且不是数字
+            if (!is_null($value) && !is_numeric($value)) {
                 return false;
             }
             if ($this->set($key, $value += $float)) {
@@ -422,7 +455,11 @@ class SSDB implements Base, Lock, Incr, Multi {
      */
     public function mSet($sets) {
         try {
-            return $this->handler->multi_set($sets);
+            $ret = $this->handler->multi_set($sets);
+            if ($ret !== false) {
+                return true;
+            }
+            return false;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -455,7 +492,7 @@ class SSDB implements Base, Lock, Incr, Multi {
                     $this->handler->del($key);
                 }
             }
-            return $status;
+            return (boolean) $status;
         } catch (\SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
