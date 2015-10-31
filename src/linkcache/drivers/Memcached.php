@@ -134,7 +134,7 @@ class Memcached implements Base, Lock, Incr, Multi {
     public function set($key, $value, $time = -1) {
         try {
             if ($time > 0) {
-                return $this->handler->setMulti([$key => self::setValue($value), self::timeKey($key) => $time + time()], time() + $time);
+                return $this->handler->setMulti([$key => self::setValue($value), self::timeKey($key) => $time + time()], $time <= 2592000 ? $time : time() + $time);
             }
             //如果存在timeKey且已过期，则删除timeKey
             $expireTime = $this->handler->get(self::timeKey($key));
@@ -160,8 +160,8 @@ class Memcached implements Base, Lock, Incr, Multi {
     public function setnx($key, $value, $time = -1) {
         try {
             if ($time > 0) {
-                if ($this->handler->add($key, self::setValue($value), time() + $time)) {
-                    $ret = $this->handler->set(self::timeKey($key), $time + time(), time() + $time);
+                if ($this->handler->add($key, self::setValue($value), $time <= 2592000 ? $time : time() + $time)) {
+                    $ret = $this->handler->set(self::timeKey($key), $time + time(), $time <= 2592000 ? $time : time() + $time);
                     //如果执行失败，则尝试删除key
                     if ($ret === false) {
                         $this->handler->delete($key);
@@ -203,7 +203,11 @@ class Memcached implements Base, Lock, Incr, Multi {
     public function del($key) {
         try {
             $this->handler->delete(self::timeKey($key));
-            return $this->handler->delete($key);
+            $ret = $this->handler->delete($key);
+            if (!$ret && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                return true;
+            }
+            return $ret;
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -286,7 +290,7 @@ class Memcached implements Base, Lock, Incr, Multi {
                 }
                 return false;
             }
-            return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], time() + $time);
+            return $this->handler->setMulti([$key => $value, self::timeKey($key) => $time + time()], $time <= 2592000 ? $time : time() + $time);
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -333,7 +337,7 @@ class Memcached implements Base, Lock, Incr, Multi {
      */
     public function lock($key, $time = 60) {
         try {
-            return $this->handler->set(self::lockKey($key), 1, time() + $time);
+            return $this->handler->set(self::lockKey($key), 1, $time <= 2592000 ? $time : time() + $time);
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -371,15 +375,28 @@ class Memcached implements Base, Lock, Incr, Multi {
         }
         try {
             $value = $this->handler->get($key);
-            if (!is_int($value)) {
-                return false;
-            }
-            $expire = $this->handler->get(self::timeKey($key));
-            if ($expire > time()) {
-                return $this->handler->increment($key, $step);
-            }
-            if ($this->handler->set($key, $value += $step)) {
-                return $value;
+            if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                if ($this->handler->set($key, $value = $step, 0)) {
+                    return $value;
+                }
+            } else {
+                //memcache会将数字存储为字符串
+                if (!is_numeric($value)) {
+                    return false;
+                }
+                $expire = $this->handler->get(self::timeKey($key));
+                //未设置过期时间或未过期
+                if ($expire === false || $expire > time()) {
+                    if ($step > 0) {
+                        return $this->handler->increment($key, $step);
+                    } else {
+                        return $this->handler->decrement($key, -$step);
+                    }
+                }
+                //已过期,重新设置
+                if ($this->handler->set($key, $value = $step)) {
+                    return $value;
+                }
             }
             return false;
         } catch (Exception $ex) {
@@ -402,18 +419,26 @@ class Memcached implements Base, Lock, Incr, Multi {
         }
         try {
             $value = $this->handler->get($key);
-            if (!is_numeric($value)) {
-                return false;
-            }
-            $expire = $this->handler->get(self::timeKey($key));
-            if ($expire > time()) {
-                if ($this->handler->set($key, $value += $float, $expire)) {
+            if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                if ($this->handler->set($key, $value = $float, 0)) {
                     return $value;
                 }
-                return false;
-            }
-            if ($this->handler->set($key, $value += $float)) {
-                return $value;
+            } else {
+                if (!is_numeric($value)) {
+                    return false;
+                }
+                $expire = $this->handler->get(self::timeKey($key));
+                //未设置过期时间或未过期
+                if ($expire === false || $expire > time()) {
+                    if ($this->handler->set($key, $value += $float, 0, $expire)) {
+                        return $value;
+                    }
+                    return false;
+                }
+                //已过期,重新设置
+                if ($this->handler->set($key, $value = $float, 0)) {
+                    return $value;
+                }
             }
             return false;
         } catch (Exception $ex) {
@@ -436,15 +461,36 @@ class Memcached implements Base, Lock, Incr, Multi {
         }
         try {
             $value = $this->handler->get($key);
-            if (!is_int($value)) {
-                return false;
-            }
-            $expire = $this->handler->get(self::timeKey($key));
-            if ($expire > time()) {
-                return $this->handler->decrement($key, $step);
-            }
-            if ($this->handler->set($key, $value -= $step)) {
-                return $value;
+            if ($value === false && $this->handler->getResultCode() === \Memcached::RES_NOTFOUND) {
+                if ($this->handler->set($key, $value = -$step, 0)) {
+                    return $value;
+                }
+            } else {
+                //memcache会将数字存储为字符串
+                if (!is_numeric($value)) {
+                    return false;
+                }
+                $expire = $this->handler->get(self::timeKey($key));
+                //未设置过期时间或未过期
+                if ($expire === false || $expire > time()) {
+                    //memcache 新的元素的值不会小于0
+                    if ($value < 0 || ($step > 0 && $value < $step)) {
+                        if ($this->handler->set($key, $value -= $step, 0)) {
+                            return $value;
+                        }
+                    } else {
+                        if ($step > 0) {
+                            $ret = $this->handler->decrement($key, $step);
+                            return $ret;
+                        } else {
+                            return $this->handler->increment($key, -$step);
+                        }
+                    }
+                }
+                //已过期,重新设置
+                if ($this->handler->set($key, $value = $step, 0)) {
+                    return $value;
+                }
             }
             return false;
         } catch (Exception $ex) {
