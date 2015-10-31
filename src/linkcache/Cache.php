@@ -348,8 +348,11 @@ class Cache {
             if (method_exists($this->driver, 'incr')) {
                 return $this->driver->incr($key, $step);
             } else {
+                if (!is_int($step)) {
+                    return false;
+                }
                 $value = $this->driver->get($key);
-                if (($value !== false && !is_int($value)) || !is_int($step)) {
+                if ($value !== false && !is_int($value)) {
                     return false;
                 }
                 if ($this->driver->set($key, $value += $step)) {
@@ -375,8 +378,11 @@ class Cache {
             if (method_exists($this->driver, 'incrByFloat')) {
                 return $this->driver->incrByFloat($key, $float);
             } else {
+                if (!is_numeric($float)) {
+                    return false;
+                }
                 $value = $this->driver->get($key);
-                if (($value !== false && !is_numeric($value)) || !is_numeric($float)) {
+                if ($value !== false && !is_numeric($value)) {
                     return false;
                 }
                 if ($this->driver->set($key, $value += $float)) {
@@ -402,8 +408,11 @@ class Cache {
             if (method_exists($this->driver, 'decr')) {
                 return $this->driver->decr($key, $step);
             } else {
+                if (!is_int($step)) {
+                    return false;
+                }
                 $value = $this->driver->get($key);
-                if (($value !== false && !is_int($value)) || !is_int($step)) {
+                if (($value !== false && !is_int($value))) {
                     return false;
                 }
                 if ($this->driver->set($key, $value -= $step)) {
