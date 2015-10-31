@@ -432,6 +432,7 @@ class Memcache implements Base, Lock, Incr, Multi {
                         return $this->handler->decrement($key, -$step);
                     }
                 }
+                //已过期,重新设置
                 if ($this->handler->set($key, $value = $step, 0)) {
                     return $value;
                 }
@@ -473,6 +474,7 @@ class Memcache implements Base, Lock, Incr, Multi {
                     }
                     return false;
                 }
+                //已过期,重新设置
                 if ($this->handler->set($key, $value = $float, 0)) {
                     return $value;
                 }
@@ -524,6 +526,7 @@ class Memcache implements Base, Lock, Incr, Multi {
                         }
                     }
                 }
+                //已过期,重新设置
                 if ($this->handler->set($key, $value = $step, 0)) {
                     return $value;
                 }
