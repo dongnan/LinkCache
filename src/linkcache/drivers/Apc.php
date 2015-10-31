@@ -12,12 +12,11 @@
 namespace linkcache\drivers;
 
 use linkcache\interfaces\driver\Base;
-use linkcache\interfaces\driver\Multi;
 
 /**
  * Apc
  */
-class Apc implements Base, Multi {
+class Apc implements Base {
 
     use \linkcache\traits\CacheDriver;
 
@@ -53,11 +52,12 @@ class Apc implements Base, Multi {
      */
     public function set($key, $value, $time = -1) {
         if ($time > 0) {
-            return apc_store($key, self::setValue(['value' => $value, 'expire_time' => $time]), $time);
+            return apc_store($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time);
         }
-        $old = self::getValue($this->getOne($key));
+        $old = self::getValue(apc_fetch($key));
         if (empty($old) || $time == 0) {
-            return apc_store($key, self::setValue(['value' => $value, 'expire_time' => -1]));
+            $ret = apc_store($key, self::setValue(['value' => $value, 'expire_time' => -1]));
+            return $ret;
         }
         $old['value'] = $value;
         //如果没有过期，设置过期时间;否则ttl默认为0
@@ -74,7 +74,7 @@ class Apc implements Base, Multi {
      */
     public function setnx($key, $value, $time = -1) {
         if ($time > 0) {
-            return apc_add($key, self::setValue(['value' => $value, 'expire_time' => $time]), $time);
+            return apc_add($key, self::setValue(['value' => $value, 'expire_time' => time() + $time]), $time);
         }
         return apc_add($key, self::setValue(['value' => $value, 'expire_time' => -1]));
     }
@@ -97,30 +97,16 @@ class Apc implements Base, Multi {
     }
 
     /**
-     * 二次获取键值,在get方法没有获取到值时，调用此方法将有可能获取到
-     * 此方法是为了防止惊群现象发生,配合lock和isLock方法,设置新的缓存
-     * @param string $key   键名
-     * @return mixed|false  键值,失败返回false
-     */
-    public function getTwice($key) {
-        $value = self::getValue(apc_fetch($key));
-        if (empty($value) || !isset($value['expire_time']) || !isset($value['value'])) {
-            return false;
-        }
-        //已过期
-        if ($value['expire_time'] > 0 && $value['expire_time'] <= time()) {
-            apc_delete($key);
-        }
-        return $value['value'];
-    }
-
-    /**
      * 删除键值
      * @param string $key   键名
      * @return boolean      是否成功
      */
     public function del($key) {
-        return apc_delete($key);
+        $ret = apc_delete($key);
+        if ($ret === false && !apc_exists($key)) {
+            return true;
+        }
+        return $ret;
     }
 
     /**
@@ -206,39 +192,6 @@ class Apc implements Base, Multi {
         }
         $value['expire_time'] = -1;
         return apc_store($key, self::setValue($value));
-    }
-
-    /**
-     * 批量设置键值
-     * @param array $sets   键值数组
-     * @return boolean      是否成功
-     */
-    public function mSet($sets) {
-        return apc_store($sets);
-    }
-
-    /**
-     * 批量设置键值(当键名不存在时)
-     * 只有当键值全部设置成功时,才返回true,否则返回false并尝试回滚
-     * @param array $sets   键值数组
-     * @return boolean      是否成功
-     */
-    public function mSetNX($sets) {
-        return apc_add($sets);
-    }
-
-    /**
-     * 批量获取键值
-     * @param array $keys   键名数组
-     * @return array|false  键值数组,失败返回false
-     */
-    public function mGet($keys) {
-        $ret = [];
-        $values = apc_fetch($keys);
-        foreach ($keys as $key) {
-            $ret[$key] = isset($values[$key]) ? $values[$key] : false;
-        }
-        return $ret;
     }
 
 }
