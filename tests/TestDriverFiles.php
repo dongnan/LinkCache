@@ -21,7 +21,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
     public function testSet() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->set('test1', 1));
-        $this->assertTrue($cache->set('test2', 2, 1));
+        $this->assertTrue($cache->set('test2', [1, 2], 1));
         $this->assertTrue($cache->set('testDel', 'del'));
         $this->assertTrue($cache->set('notNum', 'notNum'));
     }
@@ -32,7 +32,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
     public function testGet() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertEquals(1, $cache->get('test1'));
-        $this->assertEquals(2, $cache->get('test2'));
+        $this->assertEquals([1, 2], $cache->get('test2'));
         $this->assertEquals('del', $cache->get('testDel'));
         $this->assertFalse($cache->get('notExist'));
         usleep(1500000);
@@ -166,7 +166,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $this->assertTrue($cache->del('mset1'));
         $this->assertTrue($cache->del('mset2'));
         $this->assertTrue($cache->del('mset3'));
-        $this->assertTrue($cache->mSet(['mset1' => '1', 'mset2' => '2', 'mset3' => '3']));
+        $this->assertTrue($cache->mSet(['mset1' => '1', 'mset2' => [1, 2, 3], 'mset3' => '3']));
     }
 
     /**
@@ -177,17 +177,18 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $this->assertTrue($cache->del('msetnx1'));
         $this->assertTrue($cache->del('msetnx2'));
         $this->assertTrue($cache->del('msetnx3'));
-        $this->assertFalse($cache->mSetNX(['mset1' => '1', 'mset2' => '2', 'msetnx3' => '3']));
+        $this->assertFalse($cache->mSetNX(['mset1' => '1', 'mset2' => [1, 2, 3], 'msetnx3' => '3']));
         $this->assertTrue($cache->mSetNX(['msetnx1' => '1', 'msetnx2' => '2', 'msetnx3' => '3']));
     }
 
     /**
      * @depends testMSet
+     * @depends testMSetNX
      */
     public function testMGet() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
-        $this->assertArraySubset(['mset1' => '1', 'mset2' => '2', 'mset3' => '3'], $cache->mGet(['mset1', 'mset2', 'mset3']), true);
-        $this->assertArraySubset(['mset1' => '1', 'mset2' => '2', 'mset4' => false], $cache->mGet(['mset1', 'mset2', 'mset4']), true);
+        $this->assertArraySubset(['mset1' => '1', 'mset2' => [1, 2, 3], 'mset3' => '3'], $cache->mGet(['mset1', 'mset2', 'mset3']), true);
+        $this->assertArraySubset(['mset1' => '1', 'mset2' => [1, 2, 3], 'mset4' => false], $cache->mGet(['mset1', 'mset2', 'mset4']), true);
         $this->assertArraySubset(['msetnx1' => '1', 'msetnx2' => '2', 'msetnx3' => '3'], $cache->mGet(['msetnx1', 'msetnx2', 'msetnx3']), true);
     }
 
