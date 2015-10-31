@@ -411,6 +411,9 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function mSet($sets) {
         try {
+            foreach ($sets as &$value) {
+                $value = self::setValue($value);
+            }
             return $this->handler->mset($sets);
         } catch (RedisException $ex) {
             self::exception($ex);
@@ -428,6 +431,9 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function mSetNX($sets) {
         try {
+            foreach ($sets as &$value) {
+                $value = self::setValue($value);
+            }
             return $this->handler->msetnx($sets);
         } catch (RedisException $ex) {
             self::exception($ex);
@@ -447,6 +453,9 @@ class Redis implements Base, Lock, Incr, Multi {
             $values = $this->handler->mget($keys);
             if (!$values) {
                 return false;
+            }
+            foreach ($values as &$value) {
+                $value = self::getValue($value);
             }
             return array_combine($keys, $values);
         } catch (RedisException $ex) {

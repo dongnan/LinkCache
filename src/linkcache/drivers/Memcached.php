@@ -508,6 +508,9 @@ class Memcached implements Base, Lock, Incr, Multi {
      */
     public function mSet($sets) {
         try {
+            foreach ($sets as &$value) {
+                $value = self::setValue($value);
+            }
             return $this->handler->setMulti($sets);
         } catch (Exception $ex) {
             self::exception($ex);
@@ -528,7 +531,7 @@ class Memcached implements Base, Lock, Incr, Multi {
             $keys = [];
             $status = true;
             foreach ($sets as $key => $value) {
-                $status = $this->handler->add($key, $value);
+                $status = $this->handler->add($key, self::setValue($value));
                 if ($status) {
                     $keys[] = $key;
                 } else {
@@ -560,7 +563,7 @@ class Memcached implements Base, Lock, Incr, Multi {
             $ret = [];
             $values = $this->handler->getMulti($keys);
             foreach ($keys as $key) {
-                $ret[$key] = isset($values[$key]) ? $values[$key] : false;
+                $ret[$key] = isset($values[$key]) ? self::getValue($values[$key]) : false;
             }
             return $ret;
         } catch (Exception $ex) {

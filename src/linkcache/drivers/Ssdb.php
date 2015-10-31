@@ -455,6 +455,9 @@ class Ssdb implements Base, Lock, Incr, Multi {
      */
     public function mSet($sets) {
         try {
+            foreach ($sets as &$value) {
+                $value = self::setValue($value);
+            }
             $ret = $this->handler->multi_set($sets);
             if ($ret !== false) {
                 return true;
@@ -479,7 +482,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
             $keys = [];
             $status = true;
             foreach ($sets as $key => $value) {
-                $status = $this->handler->setnx($key, $value);
+                $status = $this->handler->setnx($key, self::setValue($value));
                 if ($status) {
                     $keys[] = $key;
                 } else {
@@ -511,7 +514,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
             $ret = [];
             $values = $this->handler->multi_get($keys);
             foreach ($keys as $key) {
-                $ret[$key] = isset($values[$key]) ? $values[$key] : false;
+                $ret[$key] = isset($values[$key]) ? self::getValue($values[$key]) : false;
             }
             return $ret;
         } catch (\SSDBException $ex) {
