@@ -6,7 +6,7 @@
  * @author      Dong Nan <hidongnan@gmail.com>
  * @copyright   (c) Dong Nan http://idongnan.cn All rights reserved.
  * @link        http://git.oschina.net/dongnan/LinkCache
- * @license     BSD (http://www.freebsd.org/copyright/freebsd-license.html)
+ * @license     BSD (http://opensource.org/licenses/BSD-3-Clause)
  */
 
 namespace linkcache;
