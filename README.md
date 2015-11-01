@@ -1,6 +1,6 @@
 # LinkCache - 一个灵活高效的PHP缓存工具库
 
-LinkCache 是一个PHP编写的灵活高效的缓存工具库，提供多种缓存驱动支持，包括Memcache、Memcached、Redis、SSDB、文件缓存、APC等。通过LinkCache可以使不同缓存驱动实现操作统一，同时又可发挥不同缓存驱动各自的优势。LinkCache支持缓存 `object` 和 `array`，同时为防止产生惊群现象做了优化。
+LinkCache 是一个PHP编写的灵活高效的缓存工具库，提供多种缓存驱动支持，包括Memcache、Memcached、Redis、SSDB、文件缓存、APC、YAC等。通过LinkCache可以使不同缓存驱动实现操作统一，同时又可发挥不同缓存驱动各自的优势。LinkCache支持缓存 `object` 和 `array`，同时为防止产生惊群现象做了优化。
 
 # 环境要求
 
@@ -9,6 +9,7 @@ LinkCache 是一个PHP编写的灵活高效的缓存工具库，提供多种缓�
 - 使用 Memcached 缓存需要安装[Memcached扩展](http://pecl.php.net/package/memcached)
 - 使用 Redis 缓存需要安装[Redis扩展](http://pecl.php.net/package/redis)
 - 使用 APC 缓存需要安装[APC扩展](http://pecl.php.net/package/APC)
+- 使用 YAC 缓存需要安装[YAC扩展](http://pecl.php.net/package/yac)
 
 # 安装
 
@@ -115,7 +116,7 @@ $ composer require dongnan/linkcache
 	//通过getInstance获取
 	$cache = \linkcache\Cache::getInstance();
 
-	//根据驱动类型实例化,支持的驱动:redis,memcache,memcached,ssdb,files,apc
+	//根据驱动类型实例化,支持的驱动:redis,memcache,memcached,ssdb,files,apc,yac
 	$cache = new \linkcache\Cache('files');
 	//或者
 	$cache = \linkcache\Cache::getInstance('files');
