@@ -35,8 +35,9 @@ class Cache {
      * @var array 
      */
     static private $config = [
+        //默认使用的缓存驱动
         'default' => 'files',
-        //当前缓存驱动失效时，采用的备份驱动
+        //当前缓存驱动失效时，使用的备份驱动
         'fallback' => 'files',
         'memcache' => [
             //host,port,weight,persistent,timeout,retry_interval,status,failure_callback
@@ -114,7 +115,7 @@ class Cache {
     }
 
     /**
-     * 设置默认配置
+     * 设置配置
      * @param array $config 配置信息
      */
     static public function setConfig($config) {
