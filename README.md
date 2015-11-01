@@ -115,14 +115,13 @@ $ composer require dongnan/linkcache
 	//通过getInstance获取
 	$cache = \linkcache\Cache::getInstance();
 
-	//根据驱动类型实例化,执行的驱动:redis,memcache,memcached,ssdb,files,apc
+	//根据驱动类型实例化,支持的驱动:redis,memcache,memcached,ssdb,files,apc
 	$cache = new \linkcache\Cache('files');
 	//或者
 	$cache = \linkcache\Cache::getInstance('files');
 
 	//传入配置参数实例化
 	$cache = new \linkcache\Cache('redis', ['host' => '127.0.0.1', 'port' => 6379]);
-	
 ```
 
 ## getDriver
@@ -151,7 +150,6 @@ Boolean 如果设置成功，返回 `true`; 如果设置失败，返回 `false`
 	$status = $cache->set($key, $value);
 	//设置有过期时间的缓存
 	$status = $cache->set($key, $value, $time);
-
 ```
 
 ## setnx
@@ -174,7 +172,6 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败，返回 `false
 	$status = $cache->setnx($key, $value);
 	//设置有过期时间的缓存
 	$status = $cache->setnx($key, $value, $time);
-
 ```
 
 ## get
@@ -193,7 +190,6 @@ Mixed - `key` 对应的值; 如果获取失败或 `key` 不存在，返回 `fals
 <?php
 	//获取key对应的值
 	$value = $cache->get($key);
-
 ```
 
 ## del
@@ -212,7 +208,6 @@ Boolean - 如果删除成功，返回 `true`; 如果删除失败，返回 `false
 <?php
 	//删除key
 	$status = $cache->del($key);
-
 ```
 
 ## has
@@ -231,7 +226,6 @@ Boolean - 如果 `key` 存在，返回 `true`；如果 `key` 不存在，返回 
 <?php
 	//判断key是否存在
 	$status = $cache->has($key);
-
 ```
 
 ## ttl
@@ -250,7 +244,6 @@ Mixed - 生存剩余时间(单位:秒) `-1` 表示永不过期,`-2` 表示 `key`
 <?php
 	//获取key的生存时间
 	$ttl = $cache->ttl($key);
-
 ```
 
 ## expire
@@ -270,7 +263,6 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败或 `key` 不存
 <?php
 	//设置一个key的生存时间
 	$status = $cache->expire($key, $time);
-
 ```
 
 ## expireAt
@@ -290,7 +282,6 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败或 `key` 不存
 <?php
 	//用UNIX时间戳设置一个key的过期时间
 	$status = $cache->expireAt($key, $time);
-
 ```
 
 ## persist
@@ -309,7 +300,6 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败或 `key` 不存
 <?php
 	//删除一个key的生存时间，使其永不过期
 	$status = $cache->persist($key);
-
 ```
 
 ## lock
@@ -329,7 +319,6 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败，返回 `false
 <?php
 	//对key设置锁标记
 	$status = $cache->lock($key, $time);
-
 ```
 
 ## isLock
@@ -348,7 +337,6 @@ Boolean - 如果解除锁标记成功，返回 `true`; 如果设置失败，返�
 <?php
 	//对key解除锁标记
 	$status = $cache->isLock($key);
-
 ```
 
 ## incr
@@ -368,7 +356,6 @@ Mixed - 递增后的值，失败返回 `false`，如果 `key` 不存在，则按
 <?php
 	//设置key的值按整数递增
 	$value = $cache->incr($key, $step);
-
 ```
 
 ## incrByFloat
@@ -388,7 +375,6 @@ Mixed - 递增后的值，失败返回 `false`，如果 `key` 不存在，则按
 <?php
 	//设置key的值按浮点数递增
 	$value = $cache->incrByFloat($key, $float);
-
 ```
 
 ## decr
@@ -408,7 +394,6 @@ Mixed - 递减后的值，失败返回 `false`，如果 `key` 不存在，则按
 <?php
 	//设置key的值按整数递减
 	$value = $cache->decr($key, $step);
-
 ```
 
 ## mSet
@@ -432,7 +417,6 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败，返回 `false
 	];
 	//批量设置多个key对应的值
 	$status = $cache->mSet($sets);
-
 ```
 
 ## mSetNX
@@ -456,7 +440,6 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败，返回 `false
 	];
 	//当缓存中不存在key时，批量设置多个key对应的值
 	$status = $cache->mSetNX($sets);
-
 ```
 
 ## mGet
