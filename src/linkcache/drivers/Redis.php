@@ -227,9 +227,10 @@ class Redis implements Base, Lock, Incr, Multi {
     public function del($key) {
         try {
             $ret = $this->handler->del($key);
-            if ($ret !== false) {
+            if ($ret > 0 || ($ret === 0 && !$this->handler->exists($key))) {
                 return true;
             }
+            return false;
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -458,6 +459,48 @@ class Redis implements Base, Lock, Incr, Multi {
                 $value = self::getValue($value);
             }
             return array_combine($keys, $values);
+        } catch (RedisException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 批量判断键值是否存在
+     * @param array $keys   键名数组
+     * @return array  返回存在的keys
+     */
+    public function mHas($keys) {
+        try {
+            $hasKeys = [];
+            foreach ($keys as $key) {
+                if ($this->handler->exists($key)) {
+                    $hasKeys[] = $key;
+                }
+            }
+            return $hasKeys;
+        } catch (RedisException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 批量删除键值
+     * @param array $keys   键名数组
+     * @return boolean  是否成功
+     */
+    public function mDel($keys) {
+        try {
+            $ret = $this->handler->del($keys);
+            if ($ret > 0 || ($ret === 0 && empty($this->mHas($keys)))) {
+                return true;
+            }
+            return false;
         } catch (RedisException $ex) {
             self::exception($ex);
             //连接状态置为false

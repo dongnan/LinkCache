@@ -525,6 +525,58 @@ class Cache {
         return false;
     }
 
+    /**
+     * 批量判断键值是否存在
+     * @param array $keys   键名数组
+     * @return array  返回存在的keys
+     */
+    public function mHas($keys) {
+        if ($this->driver->checkDriver()) {
+            if (method_exists($this->driver, 'mHas')) {
+                return $this->driver->mHas($keys);
+            } else {
+                $hasKeys = [];
+                foreach ($keys as $key) {
+                    if ($this->driver->has($key)) {
+                        $hasKeys[] = $key;
+                    }
+                }
+                return $hasKeys;
+            }
+        }
+        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
+            return $this->driver->backup()->mHas($keys);
+        }
+        return false;
+    }
+
+    /**
+     * 批量判断键值是否存在
+     * @param array $keys   键名数组
+     * @return array  返回存在的keys
+     */
+    public function mDel($keys) {
+        if ($this->driver->checkDriver()) {
+            if (method_exists($this->driver, 'mDel')) {
+                return $this->driver->mDel($keys);
+            } else {
+                $status = true;
+                foreach ($keys as $key) {
+                    $ret = $this->driver->del($key);
+                    //如果有删除失败，则整个批量删除判断为失败，但继续执行完所有删除操作
+                    if (!$ret) {
+                        $status = false;
+                    }
+                }
+                return $status;
+            }
+        }
+        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
+            return $this->driver->backup()->mDel($keys);
+        }
+        return false;
+    }
+
     public function __set($name, $value) {
         return $this->set($name, $value);
     }

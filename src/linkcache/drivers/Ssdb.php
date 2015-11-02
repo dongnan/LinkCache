@@ -15,6 +15,7 @@ use linkcache\interfaces\driver\Base;
 use linkcache\interfaces\driver\Lock;
 use linkcache\interfaces\driver\Incr;
 use linkcache\interfaces\driver\Multi;
+use \SSDBException;
 
 /**
  * Ssdb
@@ -104,7 +105,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
         try {
             $this->handler = new \SimpleSSDB($host, $port, $timeoutms);
             $this->isConnected = true;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             $this->isConnected = false;
         }
@@ -133,7 +134,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 if ($this->handler->ping()) {
                     $this->isConnected = true;
                 }
-            } catch (\SSDBException $ex) {
+            } catch (SSDBException $ex) {
                 self::exception($ex);
                 $this->connect();
             }
@@ -166,7 +167,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 return true;
             }
             return false;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -200,7 +201,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 return true;
             }
             return false;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -220,7 +221,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 return false;
             }
             return $this->getValue($value);
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -240,7 +241,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 return true;
             }
             return false;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -256,7 +257,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
     public function has($key) {
         try {
             return (boolean) $this->handler->exists($key);
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -276,7 +277,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 return -2;
             }
             return $this->handler->ttl($key);
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -306,7 +307,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
             } else {
                 return (boolean) $this->handler->expire($key, $time);
             }
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -332,7 +333,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 }
             }
             return false;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -355,7 +356,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 return true;
             }
             return false;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -372,7 +373,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
     public function isLock($key) {
         try {
             return (boolean) $this->handler->exists(self::lockKey($key));
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -392,7 +393,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
         }
         try {
             return $this->handler->incr($key, $step);
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -420,7 +421,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 return $value;
             }
             return false;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -440,7 +441,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
         }
         try {
             return $this->handler->incr($key, -$step);
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -463,7 +464,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 return true;
             }
             return false;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -496,7 +497,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 }
             }
             return (boolean) $status;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;
@@ -517,7 +518,49 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 $ret[$key] = isset($values[$key]) ? self::getValue($values[$key]) : false;
             }
             return $ret;
-        } catch (\SSDBException $ex) {
+        } catch (SSDBException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 批量判断键值是否存在
+     * @param array $keys   键名数组
+     * @return array  返回存在的keys
+     */
+    public function mHas($keys) {
+        try {
+            $hasKeys = [];
+            foreach ($keys as $key) {
+                if ($this->handler->exists($key)) {
+                    $hasKeys[] = $key;
+                }
+            }
+            return $hasKeys;
+        } catch (SSDBException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 批量删除键值
+     * @param array $keys   键名数组
+     * @return boolean  是否成功
+     */
+    public function mDel($keys) {
+        try {
+            $ret = $this->handler->multi_del($keys);
+            if ($ret !== false || ($ret === 0 && empty($this->mHas($keys)))) {
+                return true;
+            }
+            return false;
+        } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
             $this->isConnected = false;

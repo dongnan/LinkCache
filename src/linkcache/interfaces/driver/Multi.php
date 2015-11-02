@@ -37,4 +37,18 @@ interface Multi {
      * @return array|false  键值数组,失败返回false
      */
     public function mGet($keys);
+
+    /**
+     * 批量判断键值是否存在
+     * @param array $keys   键名数组
+     * @return array  返回存在的keys
+     */
+    public function mHas($keys);
+
+    /**
+     * 批量删除键值
+     * @param array $keys   键名数组
+     * @return boolean  是否成功
+     */
+    public function mDel($keys);
 }

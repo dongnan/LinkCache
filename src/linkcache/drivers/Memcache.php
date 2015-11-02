@@ -631,4 +631,50 @@ class Memcache implements Base, Lock, Incr, Multi {
         return false;
     }
 
+    /**
+     * 批量判断键值是否存在
+     * @param array $keys   键名数组
+     * @return array  返回存在的keys
+     */
+    public function mHas($keys) {
+        try {
+            $hasKeys = [];
+            foreach ($keys as $key) {
+                if ($this->has($key)) {
+                    $hasKeys[] = $key;
+                }
+            }
+            return $hasKeys;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 批量删除键值
+     * @param array $keys   键名数组
+     * @return boolean  是否成功
+     */
+    public function mDel($keys) {
+        try {
+            $status = true;
+            foreach ($keys as $key) {
+                $ret = $this->del($key);
+                //如果有删除失败，则整个批量删除判断为失败，但继续执行完所有删除操作
+                if (!$ret) {
+                    $status = false;
+                }
+            }
+            return $status;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
 }
