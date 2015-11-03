@@ -48,7 +48,7 @@ $ composer require dongnan/linkcache
 - [expireAt](#expireAt) - 用UNIX时间戳设置一个 `key` 的过期时间
 - [persist](#persist) - 删除一个 `key` 的生存时间，使其永不过期
 - [lock](#lock) - 对 `key` 设置锁标记（此锁并不对 `key` 做修改限制,仅为 `key` 的锁标记）
-- [isLock](#isLock) - 对 `key` 解除锁标记
+- [isLock](#isLock) - 判断 `key` 是否有锁标记
 - [incr](#incr) - 设置 `key` 的值按整数递增
 - [incrByFloat](#incrByFloat) - 设置 `key` 的值按浮点数递增
 - [decr](#decr) - 设置 `key` 的值按整数递减
@@ -324,19 +324,19 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败，返回 `false
 
 ## isLock
 
-对 `key` 解除锁标记
+判断 `key` 是否有锁标记
 
 #### 参数
 - key - 字符串
 
 #### 返回值
-Boolean - 如果解除锁标记成功，返回 `true`; 如果设置失败，返回 `false`
+Boolean - 如果有锁标记，返回 `true`; 如果没有锁标记或判断失败，返回 `false`
 
 #### 例子
 
 ```
 <?php
-	//对key解除锁标记
+	//判断key是否有锁标记
 	$status = $cache->isLock($key);
 ```
 
