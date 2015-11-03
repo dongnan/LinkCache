@@ -551,9 +551,9 @@ class Cache {
     }
 
     /**
-     * 批量判断键值是否存在
+     * 批量删除键值
      * @param array $keys   键名数组
-     * @return array  返回存在的keys
+     * @return boolean  是否成功
      */
     public function mDel($keys) {
         if ($this->driver->checkDriver()) {
