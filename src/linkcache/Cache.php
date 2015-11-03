@@ -609,7 +609,7 @@ class Cache {
             try {
                 return call_user_func_array(array($this->driver->backup(), $method), $args);
             } catch (\Exception $ex) {
-                \linkcache\traits\Cache::exception($ex);
+                self::exception($ex);
             }
         }
         return false;
