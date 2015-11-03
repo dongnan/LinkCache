@@ -33,4 +33,11 @@ interface Lock {
      * @return boolean      是否加锁
      */
     public function isLock($key);
+
+    /**
+     * 对指定键名移除锁标记
+     * @param string $key   键名
+     * @return boolean      是否成功
+     */
+    public function unlock($key);
 }

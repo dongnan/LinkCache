@@ -346,6 +346,22 @@ class Redis implements Base, Lock, Incr, Multi {
     }
 
     /**
+     * 对指定键名移除锁标记
+     * @param string $key   键名
+     * @return boolean      是否成功
+     */
+    public function unlock($key) {
+        try {
+            return $this->del(self::lockKey($key));
+        } catch (RedisException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
      * 递增
      * @param string $key   键名
      * @param int $step     递增步长

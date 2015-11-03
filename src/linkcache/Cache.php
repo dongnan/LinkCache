@@ -339,6 +339,25 @@ class Cache {
     }
 
     /**
+     * 对指定键名移除锁标记
+     * @param string $key   键名
+     * @return boolean      是否成功
+     */
+    public function unlock($key) {
+        if ($this->driver->checkDriver()) {
+            if (method_exists($this->driver, 'unlock')) {
+                return $this->driver->unlock($key);
+            } else {
+                return $this->driver->del(self::lockKey($key));
+            }
+        }
+        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
+            return $this->driver->backup()->unlock($key);
+        }
+        return false;
+    }
+
+    /**
      * 递增
      * @param string $key   键名
      * @param int $step     递增步长
