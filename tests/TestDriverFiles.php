@@ -123,6 +123,15 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
     }
 
     /**
+     * @depends testLock
+     */
+    public function testUnLock() {
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertTrue($cache->unlock('testLock'));
+        $this->assertFalse($cache->isLock('testLock'));
+    }
+
+    /**
      * @depends testSet
      */
     public function testIncr() {
@@ -190,6 +199,27 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $this->assertArraySubset(['mset1' => '1', 'mset2' => [1, 2, 3], 'mset3' => '3'], $cache->mGet(['mset1', 'mset2', 'mset3']), true);
         $this->assertArraySubset(['mset1' => '1', 'mset2' => [1, 2, 3], 'mset4' => false], $cache->mGet(['mset1', 'mset2', 'mset4']), true);
         $this->assertArraySubset(['msetnx1' => '1', 'msetnx2' => '2', 'msetnx3' => '3'], $cache->mGet(['msetnx1', 'msetnx2', 'msetnx3']), true);
+    }
+
+    /**
+     * @depends testMSet
+     * @depends testMSetNX
+     */
+    public function testMDel() {
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertTrue($cache->mDel(['mset2', 'msetnx2']));
+    }
+
+    /**
+     * @depends testMSet
+     * @depends testMSetNX
+     * @depends testMDel
+     */
+    public function testMHas() {
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertArraySubset(['mset1', 'mset3'], $cache->mHas(['mset1', 'mset2', 'mset3', 'mset4']), true);
+        $this->assertArraySubset([], $cache->mHas(['msetnx4', 'msetnx5']), true);
+        $this->assertArraySubset(['msetnx1'], $cache->mHas(['msetnx1', 'msetnx2']), true);
     }
 
 }
