@@ -328,8 +328,8 @@ class Memcached implements Base, Lock, Incr, Multi {
     }
 
     /**
-     * 对指定键名加锁（此锁并不对键值做修改限制,仅为键名的锁标记）
-     * 此方法可用于防止惊群现象发生,在get方法获取键值无效时,先判断键名是否加锁,
+     * 对指定键名设置锁标记（此锁并不对键值做修改限制,仅为键名的锁标记）
+     * 此方法可用于防止惊群现象发生,在get方法获取键值无效时,先判断键名是否有锁标记,
      * 如果已加锁,则不获取新值;如果未加锁,则获取新值,设置新的缓存
      * @param string $key   键名
      * @param int $time     加锁时间
@@ -347,10 +347,10 @@ class Memcached implements Base, Lock, Incr, Multi {
     }
 
     /**
-     * 对指定键名解锁
-     * 此方法可用于防止惊群现象发生,在get方法获取键值无效时,判断键名是否加锁
+     * 判断键名是否有锁标记
+     * 此方法可用于防止惊群现象发生,在get方法获取键值无效时,判断键名是否有锁标记
      * @param string $key   键名
-     * @return boolean      是否成功
+     * @return boolean      是否加锁
      */
     public function isLock($key) {
         try {
