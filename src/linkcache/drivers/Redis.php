@@ -497,8 +497,14 @@ class Redis implements Base, Lock, Incr, Multi {
     public function mDel($keys) {
         try {
             $ret = $this->handler->del($keys);
-            if ($ret > 0 || ($ret === 0 && empty($this->mHas($keys)))) {
+            if ($ret > 0) {
                 return true;
+            } elseif ($ret === 0) {
+                $hasKeys = $this->mHas($keys);
+                //在 PHP 5.5 之前,empty() 仅支持变量;任何其他东西将会导致一个解析错误
+                if (empty($hasKeys) && is_array($hasKeys)) {
+                    return true;
+                }
             }
             return false;
         } catch (RedisException $ex) {
