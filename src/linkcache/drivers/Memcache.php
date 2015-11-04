@@ -101,10 +101,14 @@ class Memcache implements Base, Lock, Incr, Multi {
             $this->compress = MEMCACHE_COMPRESSED;
         }
         //如果获取服务器池的统计信息返回false,说明服务器池中有不可用服务器
-        if ($this->handler->getStats() === false) {
+        try {
+            if ($this->handler->getStats() === false) {
+                $this->isConnected = false;
+            } else {
+                $this->isConnected = true;
+            }
+        } catch (Exception $ex) {
             $this->isConnected = false;
-        } else {
-            $this->isConnected = true;
         }
     }
 
