@@ -110,7 +110,7 @@ class FileLog {
     public function log($level, $message, $data = []) {
         //根据最小日志等级记录日志
         if ($level < $this->minlevel) {
-            return;
+            return false;
         }
         if (!is_resource($this->stream)) {
             $logpath = $this->path . date('/Y/md');
@@ -127,7 +127,11 @@ class FileLog {
         $jsonData = preg_replace('/\s+/', ' ', var_export($data, true));
         $levelName = isset(self::$levels[$level]) ? self::$levels[$level] : $level;
         $output = "[{$datetime}] {$this->name}.{$levelName}: {$message} {$jsonData}" . PHP_EOL;
-        fwrite($this->stream, $output);
+        $len = fwrite($this->stream, $output);
+        if ($len !== false) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -138,7 +142,7 @@ class FileLog {
      * @return boolean
      */
     public function debug($message, $data = []) {
-        $this->log(FileLog::DEBUG, $message, $data);
+        return $this->log(FileLog::DEBUG, $message, $data);
     }
 
     /**
@@ -149,7 +153,7 @@ class FileLog {
      * @return boolean
      */
     public function info($message, $data = []) {
-        $this->log(FileLog::INFO, $message, $data);
+        return $this->log(FileLog::INFO, $message, $data);
     }
 
     /**
@@ -160,7 +164,7 @@ class FileLog {
      * @return boolean
      */
     public function notice($message, $data = []) {
-        $this->log(FileLog::NOTICE, $message, $data);
+        return $this->log(FileLog::NOTICE, $message, $data);
     }
 
     /**
@@ -171,7 +175,7 @@ class FileLog {
      * @return boolean
      */
     public function warning($message, $data = []) {
-        $this->log(FileLog::WARNING, $message, $data);
+        return $this->log(FileLog::WARNING, $message, $data);
     }
 
     /**
@@ -182,7 +186,7 @@ class FileLog {
      * @return boolean
      */
     public function error($message, $data = []) {
-        $this->log(FileLog::ERROR, $message, $data);
+        return $this->log(FileLog::ERROR, $message, $data);
     }
 
     /**
@@ -193,7 +197,7 @@ class FileLog {
      * @return boolean
      */
     public function critical($message, $data = []) {
-        $this->log(FileLog::CRITICAL, $message, $data);
+        return $this->log(FileLog::CRITICAL, $message, $data);
     }
 
     /**
@@ -204,7 +208,7 @@ class FileLog {
      * @return boolean
      */
     public function alert($message, $data = []) {
-        $this->log(FileLog::ALERT, $message, $data);
+        return $this->log(FileLog::ALERT, $message, $data);
     }
 
     /**
@@ -215,7 +219,7 @@ class FileLog {
      * @return boolean
      */
     public function emergency($message, $data = []) {
-        $this->log(FileLog::EMERGENCY, $message, $data);
+        return $this->log(FileLog::EMERGENCY, $message, $data);
     }
 
 }
