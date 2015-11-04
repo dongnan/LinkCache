@@ -90,19 +90,24 @@ class Cache {
         if (empty($type)) {
             $type = self::$config['default'] ? : 'files';
         }
+        $this->type = $type;
+        //自定义配置,获取缓存驱动类型
+        if (isset(self::$config[$type]['driver_type']) && !empty(self::$config[$type]['driver_type'])) {
+            $type = self::$config[$type]['driver_type'];
+        }
         $key = $type . md5(serialize($config));
         if (!isset(self::$_drivers[$key])) {
-            $class = strpos($type, '\\') ? $type : 'linkcache\\drivers\\' . ucwords(strtolower($type));
+            $class = '\\linkcache\\drivers\\' . ucwords(strtolower($type));
             if (class_exists($class)) {
-                if (!empty($type) && isset(self::$config[$type])) {
-                    $config = array_merge(self::$config[$type], $config);
+                if (isset(self::$config[$this->type])) {
+                    $config = array_merge(self::$config[$this->type], $config);
                 }
                 self::$_drivers[$key] = new $class($config);
             } else {
                 throw new \Exception("{$class} is not exists!");
             }
         }
-        $this->type = $type;
+
         $this->driver = self::$_drivers[$key];
     }
 
