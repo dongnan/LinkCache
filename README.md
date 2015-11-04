@@ -65,7 +65,7 @@ $ composer require dongnan/linkcache
 
 ```
 <?php 
-	//设置缓存, 使用 array_merge 的方式合并到默认配置中
+	//设置缓存配置, 使用 array_merge 的方式合并到默认配置中
 	\linkcache\Cache::setConfig($config);
 	
 	//获取配置信息
@@ -520,6 +520,88 @@ Boolean - 如果删除成功，返回 `true`; 如果删除失败，返回 `false
 	//批量删除key
 	$status = $cache->mDel($keys);
 ```
+
+# 默认情况说明
+
+- [Cache](#cache) - `\linkcache\Cache`
+- [drivers](#drivers)
+	- [files](#files) - `\linkcache\drivers\Files`
+	- [memcache](#memcache) - `\linkcache\drivers\Memcache`
+	- [memcached](#memcached) - `\linkcache\drivers\Memcached`
+	- [redis](#redis) - `\linkcache\drivers\Redis`
+	- [ssdb](#ssdb) - `\linkcache\drivers\Ssdb`
+	- [apc](#apc) - `\linkcache\drivers\Apc`
+	- [yac](#yac) - `\linkcache\drivers\Yac`
+
+## cache
+
+- 默认使用的缓存驱动： `files`
+- 默认使用的备用驱动： `files`
+- `memcache`、`redis`、`ssdb` 等缓存驱动的默认配置均参考官方默认配置
+- 自定义配置支持非驱动类型的key，但配置信息中需要有 `driver_type` 属性，否则会抛异常
+	- 例如：
+	```
+	<?php
+		use \linkcache\Cache;
+		$config = [
+			'redis_m_db_1' => [
+				'driver_type' => 'redis',
+				'host' => '127.0.0.1',
+				'port' => 6380,
+				'database' => 1
+			],
+			'redis_m_db_2' => [
+				'driver_type' => 'redis',
+				'host' => '127.0.0.1',
+				'port' => 6380,
+				'database' => 2
+			],
+			'redis_s_db' => [
+				'driver_type' => 'redis',
+				'host' => '127.0.0.1',
+				'port' => 6381
+			]
+		];
+		Cache::setConfig($config);
+		//根据自定义配置实例化
+		$redisM1 = new Cache('redis_m_db_1');
+		$redisM2 = new Cache('redis_m_db_2');
+		$redisS0 = new Cache('redis_s_db');
+	```
+
+## drivers
+
+- 所有驱动默认使用备用缓存
+- 备用缓存优先使用实例化时构造函数传入的配置 `config` 中的 `fallback` 定义，如果没有定义，则使用 `\linkcache\Cache::$config` 中的 `fallback` 定义
+
+### files
+
+- 默认保存路径：优先使用上传文件临时目录，未定义则使用系统临时目录，并在目录下创建linkcache目录，作为 `files` 驱动的默认保存路径，代码如下：
+  `(ini_get('upload_tmp_dir') ? ini_get('upload_tmp_dir') : sys_get_temp_dir()) . '/linkcache'`
+
+### memcache
+
+- 当 `memcache` 连接断开后，最大重连次数为3次，重新建立连接后，连接重试次数清零
+
+### memcached
+
+- 当 `memcached` 连接断开后，最大重连次数为3次，重新建立连接后，连接重试次数清零
+
+### redis
+
+- 当 `redis` 连接断开后，最大重连次数为3次，重新建立连接后，连接重试次数清零
+
+### ssdb
+
+- 当 `ssdb` 连接断开后，最大重连次数为3次，重新建立连接后，连接重试次数清零
+
+### apc
+
+- 无
+
+### yac
+
+- 可自定义缓存 `key` 前缀，默认无 `key` 前缀
 
 # 开发
 
