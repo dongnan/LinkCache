@@ -25,6 +25,12 @@ class Memcached implements Base, Lock, Incr, Multi {
     use \linkcache\traits\CacheDriver;
 
     /**
+     * servers 配置
+     * @var array 
+     */
+    private $servers = [];
+
+    /**
      * Memcached 对象
      * @var \Memcached 
      */
@@ -81,16 +87,35 @@ class Memcached implements Base, Lock, Incr, Multi {
             $host = isset($server['host']) ? $server['host'] : '127.0.0.1';
             $port = isset($server['port']) ? $server['port'] : 11211;
             $weight = isset($server['weight']) ? $server['weight'] : 0;
+            $this->servers["{$host}:{$port}"] = [$host, $port, $weight];
             $this->handler->addserver($host, $port, $weight);
         }
         if (!empty($this->config['options'])) {
             $this->handler->setOptions($this->config['options']);
         }
-        //如果获取服务器池的统计信息返回false,说明服务器池中有不可用服务器
-        if ($this->handler->getStats() === false) {
+        $this->handler->getStats();
+    }
+
+    public function getStats() {
+        $stats = $this->handler->getStats();
+        $servers = $this->servers;
+        foreach ($stats as $key => $stat) {
+            if ($stat['pid'] === -1) {
+                //移除不可用的server
+                unset($servers[$key]);
+            }
+        }
+        //没有可用的server
+        if (empty($servers)) {
             $this->isConnected = false;
+            return false;
         } else {
-            $this->isConnected = true;
+            $this->handler->resetServerList();
+            $status = $this->handler->addServers(array_values($servers));
+            if ($status) {
+                $this->isConnected = true;
+            }
+            return $status;
         }
     }
 
@@ -100,10 +125,8 @@ class Memcached implements Base, Lock, Incr, Multi {
      */
     public function checkDriver() {
         if (!$this->isConnected && $this->reConnected < $this->maxReConnected) {
-            if ($this->handler->getStats() !== false) {
+            if ($this->getStats() !== false) {
                 $this->isConnected = true;
-            } else {
-                $this->handler->initServers();
             }
             if (!$this->isConnected) {
                 $this->reConnected++;
