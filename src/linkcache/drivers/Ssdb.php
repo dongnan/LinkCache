@@ -131,7 +131,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
     public function checkDriver() {
         if (!$this->isConnected && $this->reConnected < $this->maxReConnected) {
             try {
-                if ($this->handler->ping()) {
+                if (isset($this->handler) && $this->handler->ping()) {
                     $this->isConnected = true;
                 }
             } catch (SSDBException $ex) {
