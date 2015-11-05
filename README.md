@@ -69,9 +69,9 @@ $ composer require dongnan/linkcache
 	\linkcache\Cache::setConfig($config);
 	
 	//获取配置信息
-	$congig = \linkcache\Cache::getConfig();
+	$config = \linkcache\Cache::getConfig();
 	//获取指定缓存驱动的配置信息
-	$congig = \linkcache\Cache::getConfig('redis');
+	$config = \linkcache\Cache::getConfig('redis');
 
 	//默认配置信息
 	[
