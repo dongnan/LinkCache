@@ -310,9 +310,10 @@ class Redis implements Base, Lock, Incr, Multi {
     }
 
     /**
-     * 对指定键名设置锁标记（此锁并不对键值做修改限制,仅为键名的锁标记）
-     * 此方法可用于防止惊群现象发生,在get方法获取键值无效时,先判断键名是否有锁标记,
-     * 如果已加锁,则不获取新值;如果未加锁,则先设置锁，若设置失败说明锁已存在，若设置成功则获取新值,设置新的缓存
+     * 对指定键名设置锁标记（此锁并不对键值做修改限制,仅为键名的锁标记）;<br>
+     * 此方法可用于防止惊群现象发生,在get方法获取键值无效时,先判断键名是否有锁标记,<br>
+     * 如果已加锁,则不获取新值;<br>
+     * 如果未加锁,则先设置锁，若设置失败说明锁已存在，若设置成功则获取新值,设置新的缓存
      * @param string $key   键名
      * @param int $time     加锁时间
      * @return boolean      是否成功
@@ -329,7 +330,7 @@ class Redis implements Base, Lock, Incr, Multi {
     }
 
     /**
-     * 判断键名是否有锁标记
+     * 判断键名是否有锁标记;<br>
      * 此方法可用于防止惊群现象发生,在get方法获取键值无效时,判断键名是否有锁标记
      * @param string $key   键名
      * @return boolean      是否加锁
@@ -441,7 +442,7 @@ class Redis implements Base, Lock, Incr, Multi {
     }
 
     /**
-     * 批量设置键值(当键名不存在时)
+     * 批量设置键值(当键名不存在时);<br>
      * 只有当键值全部设置成功时,才返回true,否则返回false并尝试回滚
      * @param array $sets   键值数组
      * @return boolean      是否成功

@@ -24,7 +24,7 @@ interface Multi {
     public function mSet($sets);
 
     /**
-     * 批量设置键值(当键名不存在时)
+     * 批量设置键值(当键名不存在时);<br>
      * 只有当键值全部设置成功时,才返回true,否则返回false并尝试回滚
      * @param array $sets   键值数组
      * @return boolean      是否成功
