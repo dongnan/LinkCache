@@ -315,7 +315,7 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败或 `key` 不存
 - time - 整数，`key锁标记` 的生存时间(单位:s)
 
 #### 返回值
-Boolean - 如果设置成功，返回 `true`; 如果设置失败，返回 `false`
+Boolean - 如果设置成功，返回 `true`; 如果 `key` 已存在或设置失败，返回 `false`
 
 #### 例子
 
@@ -836,9 +836,9 @@ Boolean - 如果删除成功，返回 `true`; 如果删除失败，返回 `false
 
 		....................
 		
-		Time: 3.24 seconds, Memory: 8.50Mb
+		Time: 3.24 seconds, Memory: 8.75Mb
 		
-		OK (20 tests, 74 assertions)
+		OK (20 tests, 75 assertions)
 		```
 
 # LICENSE

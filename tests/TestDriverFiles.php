@@ -111,6 +111,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testLock'));
         $this->assertTrue($cache->lock('testLock'));
+        $this->assertFalse($cache->lock('testLock'));
     }
 
     /**
