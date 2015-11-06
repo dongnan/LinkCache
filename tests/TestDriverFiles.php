@@ -35,7 +35,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $this->assertEquals([1, 2], $cache->get('test2'));
         $this->assertEquals('del', $cache->get('testDel'));
         $this->assertFalse($cache->get('notExist'));
-        usleep(1500000);
+        sleep(2);
         $this->assertFalse($cache->get('test2'));
     }
 
@@ -99,7 +99,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
      */
     public function testTtl() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
-        usleep(1500000);
+        sleep(2);
         $this->assertEquals(-2, $cache->ttl('testExpire'));
         $this->assertEquals(-2, $cache->ttl('testExpireAt'));
         $this->assertEquals(-1, $cache->ttl('testPersist'));
