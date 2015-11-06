@@ -210,6 +210,38 @@ class Ssdb implements Base, Lock, Incr, Multi {
     }
 
     /**
+     * 设置键值，将自动延迟过期;<br>
+     * 此方法用于缓存对过期要求宽松的数据;<br>
+     * 使用此方法设置缓存配合getDE方法可以有效防止惊群现象发生
+     * @param string $key   键名
+     * @param mixed $value  键值
+     * @param int $time     过期时间，小于0则不设置过期时间;为0则设置为永不过期
+     * @return boolean      是否成功
+     */
+    public function setDE($key, $value, $time) {
+        try {
+            if ($time > 0) {
+                $ret = $this->handler->batch()
+                        ->setx($key, self::setValue($value), $time + 1800) //延迟过期 1800s
+                        ->setx(self::timeKey($key), $time + time(), $time + 1800)
+                        ->exec();
+                return $ret !== false ? true : false;
+            }
+            //如果存在timeKey且已过期，则删除timeKey；如果$time为0，则设置为永不过期
+            $expireTime = $this->handler->get(self::timeKey($key));
+            if ($expireTime > 0 && $expireTime < time() || $time == 0) {
+                $this->handler->del(self::timeKey($key));
+            }
+            return $this->handler->set($key, self::setValue($value));
+        } catch (SSDBException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
      * 获取键值
      * @param string $key   键名
      * @return mixed|false  键值,失败返回false
@@ -220,6 +252,29 @@ class Ssdb implements Base, Lock, Incr, Multi {
             if (is_null($value) || $value === false) {
                 return false;
             }
+            return $this->getValue($value);
+        } catch (SSDBException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 获取延迟过期的键值，与setDE配合使用;<br>
+     * 此方法用于获取setDE设置的缓存数据;<br>
+     * 当isExpire为true时，说明key已经过期，需要更新;<br>
+     * 更新数据时配合isLock和lock方法，防止惊群现象发生
+     * @param string $key       键名
+     * @param boolean $isExpire 是否已经过期
+     * @return mixed|false      键值,失败返回false
+     */
+    public function getDE($key, &$isExpire = null) {
+        try {
+            $expireTime = $this->handler->get(self::timeKey($key));
+            $value = $this->handler->get($key);
+            $isExpire = $value === false || ($expireTime > 0 && $expireTime < time());
             return $this->getValue($value);
         } catch (SSDBException $ex) {
             self::exception($ex);

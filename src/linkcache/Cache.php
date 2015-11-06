@@ -190,6 +190,25 @@ class Cache {
     }
 
     /**
+     * 设置键值，将自动延迟过期;<br>
+     * 此方法用于缓存对过期要求宽松的数据;<br>
+     * 使用此方法设置缓存配合getDE方法可以有效防止惊群现象发生
+     * @param string $key   键名
+     * @param mixed $value  键值
+     * @param int $time     过期时间，小于0则不设置过期时间;为0则设置为永不过期
+     * @return boolean      是否成功
+     */
+    public function setDE($key, $value, $time) {
+        if ($this->driver->checkDriver()) {
+            return $this->driver->setDE($key, $value, $time);
+        }
+        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
+            return $this->driver->backup()->setDE($key, $value, $time);
+        }
+        return false;
+    }
+
+    /**
      * 获取键值
      * @param string $key   键名
      * @return mixed|false  键值,失败返回false
@@ -200,6 +219,25 @@ class Cache {
         }
         if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
             return $this->driver->backup()->get($key);
+        }
+        return false;
+    }
+
+    /**
+     * 获取延迟过期的键值，与setDE配合使用;<br>
+     * 此方法用于获取setDE设置的缓存数据;<br>
+     * 当isExpire为true时，说明key已经过期，需要更新;<br>
+     * 更新数据时配合isLock和lock方法，防止惊群现象发生
+     * @param string $key       键名
+     * @param boolean $isExpire 是否已经过期
+     * @return mixed|false      键值,失败返回false
+     */
+    public function getDE($key, &$isExpire = null) {
+        if ($this->driver->checkDriver()) {
+            return $this->driver->getDE($key, $isExpire);
+        }
+        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
+            return $this->driver->backup()->getDE($key, $isExpire);
         }
         return false;
     }
