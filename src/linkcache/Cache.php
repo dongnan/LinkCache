@@ -159,7 +159,7 @@ class Cache {
      * 设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
+     * @param int $time     过期时间,默认为-1,<=0则设置为永不过期
      * @return boolean      是否成功
      */
     public function set($key, $value, $time = -1) {
@@ -176,7 +176,7 @@ class Cache {
      * 当键名不存在时设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
+     * @param int $time     过期时间,默认为-1,<=0则设置为永不过期
      * @return boolean      是否成功
      */
     public function setnx($key, $value, $time = -1) {
@@ -195,7 +195,7 @@ class Cache {
      * 使用此方法设置缓存配合getDE方法可以有效防止惊群现象发生
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间，小于0则不设置过期时间;为0则设置为永不过期
+     * @param int $time     过期时间，<=0则设置为永不过期
      * @return boolean      是否成功
      */
     public function setDE($key, $value, $time) {
@@ -226,18 +226,18 @@ class Cache {
     /**
      * 获取延迟过期的键值，与setDE配合使用;<br>
      * 此方法用于获取setDE设置的缓存数据;<br>
-     * 当isExpire为true时，说明key已经过期，需要更新;<br>
+     * 当isExpired为true时，说明key已经过期，需要更新;<br>
      * 更新数据时配合isLock和lock方法，防止惊群现象发生
      * @param string $key       键名
-     * @param boolean $isExpire 是否已经过期
+     * @param boolean $isExpired 是否已经过期
      * @return mixed|false      键值,失败返回false
      */
-    public function getDE($key, &$isExpire = null) {
+    public function getDE($key, &$isExpired = null) {
         if ($this->driver->checkDriver()) {
-            return $this->driver->getDE($key, $isExpire);
+            return $this->driver->getDE($key, $isExpired);
         }
         if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
-            return $this->driver->backup()->getDE($key, $isExpire);
+            return $this->driver->backup()->getDE($key, $isExpired);
         }
         return false;
     }
@@ -273,6 +273,21 @@ class Cache {
     }
 
     /**
+     * 判断延迟过期的键值理论上是否存在
+     * @param string $key   键名
+     * @return boolean      是否存在
+     */
+    public function hasDE($key) {
+        if ($this->driver->checkDriver()) {
+            return $this->driver->hasDE($key);
+        }
+        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
+            return $this->driver->backup()->hasDE($key);
+        }
+        return false;
+    }
+
+    /**
      * 获取生存剩余时间
      * @param string $key   键名
      * @return int|false    生存剩余时间(单位:秒) -1表示永不过期,-2表示键值不存在,失败返回false
@@ -283,6 +298,21 @@ class Cache {
         }
         if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
             return $this->driver->backup()->ttl($key);
+        }
+        return false;
+    }
+
+    /**
+     * 获取延迟过期的键值理论生存剩余时间
+     * @param string $key   键名
+     * @return int|false    生存剩余时间(单位:秒) -1表示永不过期,-2表示键值不存在,失败返回false
+     */
+    public function ttlDE($key) {
+        if ($this->driver->checkDriver()) {
+            return $this->driver->ttlDE($key);
+        }
+        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
+            return $this->driver->backup()->ttlDE($key);
         }
         return false;
     }
@@ -304,6 +334,23 @@ class Cache {
     }
 
     /**
+     * 以延迟过期的方式设置过期时间
+     * @param string $key    键名
+     * @param int $time      过期时间(单位:秒)。不大于0，则设为永不过期
+     * @param int $delayTime 延迟过期时间，如果未设置，则使用配置中的设置
+     * @return boolean       是否成功
+     */
+    public function expireDE($key, $time, $delayTime = null) {
+        if ($this->driver->checkDriver()) {
+            return $this->driver->expireDE($key, $time, $delayTime);
+        }
+        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
+            return $this->driver->backup()->expireDE($key, $time, $delayTime);
+        }
+        return false;
+    }
+
+    /**
      * 设置过期时间戳
      * @param string $key   键名
      * @param int $time     过期时间戳
@@ -312,7 +359,7 @@ class Cache {
     public function expireAt($key, $time) {
         $difftime = $time - time();
         if ($this->driver->checkDriver()) {
-            if ($difftime) {
+            if ($difftime > 0) {
                 return $this->driver->expire($key, $difftime);
             } else {
                 return $this->driver->del($key);
@@ -320,6 +367,28 @@ class Cache {
         }
         if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
             return $this->driver->backup()->expireAt($key, $time);
+        }
+        return false;
+    }
+
+    /**
+     * 以延迟过期的方式设置过期时间戳
+     * @param string $key    键名
+     * @param int $time      过期时间戳
+     * @param int $delayTime 延迟过期时间，如果未设置，则使用配置中的设置
+     * @return boolean       是否成功
+     */
+    public function expireAtDE($key, $time, $delayTime = null) {
+        $difftime = $time - time();
+        if ($this->driver->checkDriver()) {
+            if ($difftime > 0) {
+                return $this->driver->expireDE($key, $difftime, $delayTime);
+            } else {
+                return $this->driver->del($key);
+            }
+        }
+        if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
+            return $this->driver->backup()->expireAtDE($key, $time, $delayTime);
         }
         return false;
     }

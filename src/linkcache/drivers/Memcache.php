@@ -161,7 +161,7 @@ class Memcache implements Base, Lock, Incr, Multi {
      * 设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
+     * @param int $time     过期时间,默认为-1,<=0则设置为永不过期
      * @return boolean      是否成功
      */
     public function set($key, $value, $time = -1) {
@@ -170,17 +170,14 @@ class Memcache implements Base, Lock, Incr, Multi {
             if ($time > 0) {
                 $exTime = $time <= 2592000 ? $time : time() + $time;
                 if ($this->handler->set($key, $value, $this->compress($value), $exTime)) {
-                    $this->handler->set(self::timeKey($key), $time + time(), 0, $exTime);
+                    $this->handler->set(self::timeKey($key), self::setValue(['expire_time' => time() + $time]), 0, $exTime);
                     return true;
                 }
                 return false;
-            }
-            //如果存在timeKey且已过期，则删除timeKey
-            $expireTime = $this->handler->get(self::timeKey($key));
-            if ($expireTime > 0 && $expireTime < time() || $time == 0) {
+            } else {
                 $this->handler->delete(self::timeKey($key));
+                return $this->handler->set($key, $value, $this->compress($value));
             }
-            return $this->handler->set($key, $value, $this->compress($value));
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -193,7 +190,7 @@ class Memcache implements Base, Lock, Incr, Multi {
      * 当键名不存在时设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
+     * @param int $time     过期时间,默认为-1,<=0则设置为永不过期
      * @return boolean      是否成功
      */
     public function setnx($key, $value, $time = -1) {
@@ -202,7 +199,7 @@ class Memcache implements Base, Lock, Incr, Multi {
             if ($time > 0) {
                 $exTime = $time <= 2592000 ? $time : time() + $time;
                 if ($this->handler->add($key, $value, $this->compress($value), $exTime)) {
-                    $ret = $this->handler->set(self::timeKey($key), $time + time(), 0, $exTime);
+                    $ret = $this->handler->set(self::timeKey($key), self::setValue(['expire_time' => time() + $time]), 0, $exTime);
                     //如果执行失败，则尝试删除key
                     if ($ret === false) {
                         $this->handler->delete($key);
@@ -224,27 +221,28 @@ class Memcache implements Base, Lock, Incr, Multi {
      * 设置键值，将自动延迟过期;<br>
      * 此方法用于缓存对过期要求宽松的数据;<br>
      * 使用此方法设置缓存配合getDE方法可以有效防止惊群现象发生
-     * @param string $key   键名
-     * @param mixed $value  键值
-     * @param int $time     过期时间，小于0则不设置过期时间;为0则设置为永不过期
-     * @return boolean      是否成功
+     * @param string $key    键名
+     * @param mixed $value   键值
+     * @param int $time      过期时间，<=0则设置为永不过期
+     * @param int $delayTime 延迟过期时间，如果未设置，则使用配置中的设置
+     * @return boolean       是否成功
      */
-    public function setDE($key, $value, $time) {
+    public function setDE($key, $value, $time, $delayTime = null) {
         $value = self::setValue($value);
         try {
             if ($time > 0) {
-                //延迟过期 1800s
-                $exTime = ($time <= 2592000 ? $time : time() + $time) + 1800;
+                $delayTime = $this->getDelayTime($delayTime);
+                $exTime = $time + $delayTime <= 2592000 ? $time + $delayTime : time() + $time + $delayTime;
                 if ($this->handler->set($key, $value, $this->compress($value), $exTime)) {
-                    $this->handler->set(self::timeKey($key), $time + time(), 0, $exTime);
+                    $this->handler->set(self::timeKey($key), self::setValue(['expire_time' => time() + $time + $delayTime, 'delay_time' => $delayTime]), 0, $exTime);
                     return true;
                 }
                 return false;
             }
-            //如果存在timeKey且已过期，则删除timeKey
-            $expireTime = $this->handler->get(self::timeKey($key));
-            if ($expireTime > 0 && $expireTime < time() || $time == 0) {
-                $this->handler->delete(self::timeKey($key));
+            $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+            //已过期或 time<=0 时
+            if ($timeValue !== false && (self::isExpiredDE($timeValue) || $time <= 0)) {
+                $this->handler->delete($key, self::timeKey($key));
             }
             return $this->handler->set($key, $value, $this->compress($value));
         } catch (Exception $ex) {
@@ -262,7 +260,7 @@ class Memcache implements Base, Lock, Incr, Multi {
      */
     public function get($key) {
         try {
-            return $this->getValue($this->handler->get($key));
+            return self::getValue($this->handler->get($key));
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -274,18 +272,17 @@ class Memcache implements Base, Lock, Incr, Multi {
     /**
      * 获取延迟过期的键值，与setDE配合使用;<br>
      * 此方法用于获取setDE设置的缓存数据;<br>
-     * 当isExpire为true时，说明key已经过期，需要更新;<br>
+     * 当isExpired为true时，说明key已经过期，需要更新;<br>
      * 更新数据时配合isLock和lock方法，防止惊群现象发生
      * @param string $key       键名
-     * @param boolean $isExpire 是否已经过期
+     * @param boolean $isExpired 是否已经过期
      * @return mixed|false      键值,失败返回false
      */
-    public function getDE($key, &$isExpire = null) {
+    public function getDE($key, &$isExpired = null) {
         try {
-            $expireTime = $this->handler->get(self::timeKey($key));
-            $value = $this->handler->get($key);
-            $isExpire = $value === false || ($expireTime > 0 && $expireTime < time());
-            return $this->getValue($value);
+            $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+            $isExpired = self::isExpiredDE($timeValue);
+            return self::getValue($this->handler->get($key));
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -322,16 +319,42 @@ class Memcache implements Base, Lock, Incr, Multi {
      */
     public function has($key) {
         try {
-            $expireTime = $this->handler->get(self::timeKey($key));
-            //如果过期，则返回false
-            if ($expireTime > 0 && $expireTime < time()) {
-                return false;
-            }
             $value = $this->handler->get($key);
-            if ($value === false) {
-                return false;
+            //key存在
+            if ($value !== false) {
+                $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+                //已过期
+                if ($timeValue !== false && self::isExpired($timeValue)) {
+                    return false;
+                }
+                return true;
             }
-            return true;
+            return false;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 判断延迟过期的键值理论上是否存在
+     * @param string $key   键名
+     * @return boolean      是否存在
+     */
+    public function hasDE($key) {
+        try {
+            $value = $this->handler->get($key);
+            if ($value !== false) {
+                $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+                //已过期
+                if ($timeValue !== false && self::isExpiredDE($timeValue)) {
+                    return false;
+                }
+                return true;
+            }
+            return false;
         } catch (Exception $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -347,9 +370,40 @@ class Memcache implements Base, Lock, Incr, Multi {
      */
     public function ttl($key) {
         try {
-            $expireTime = $this->handler->get(self::timeKey($key));
-            if ($expireTime) {
-                return $expireTime > time() ? $expireTime - time() : -2;
+            $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+            if (isset($timeValue['expire_time'])) {
+                $ttl = $timeValue['expire_time'] - time();
+                return $ttl > 0 ? $ttl : -2;
+            }
+            $value = $this->handler->get($key);
+            if ($value === false) {
+                return -2;
+            } else {
+                return -1;
+            }
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 获取延迟过期的键值理论生存剩余时间
+     * @param string $key   键名
+     * @return int|false    生存剩余时间(单位:秒) -1表示永不过期,-2表示键值不存在,失败返回false
+     */
+    public function ttlDE($key) {
+        try {
+            $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+            if (isset($timeValue['expire_time'])) {
+                if (isset($timeValue['delay_time'])) {
+                    $ttl = $timeValue['expire_time'] - $timeValue['delay_time'] - time();
+                } else {
+                    $ttl = $timeValue['expire_time'] - time();
+                }
+                return $ttl > 0 ? $ttl : -2;
             }
             $value = $this->handler->get($key);
             if ($value === false) {
@@ -381,8 +435,9 @@ class Memcache implements Base, Lock, Incr, Multi {
             //设为永不过期
             if ($time <= 0) {
                 if ($this->handler->set($key, $value, $this->compress($value))) {
-                    $expire = $this->handler->get(self::timeKey($key));
-                    if ($expire) {
+                    $timeValue = $this->handler->get(self::timeKey($key));
+                    //timeKey 存在
+                    if ($timeValue !== false) {
                         return $this->handler->delete(self::timeKey($key));
                     }
                     return true;
@@ -390,9 +445,53 @@ class Memcache implements Base, Lock, Incr, Multi {
                 return false;
             }
             //设置新的过期时间
-            if ($this->handler->set($key, $value, $this->compress($value), $time <= 2592000 ? $time : time() + $time)) {
-                $this->handler->set(self::timeKey($key), $time + time(), 0, $time <= 2592000 ? $time : time() + $time);
+            $exTime = $time <= 2592000 ? $time : time() + $time;
+            if ($this->handler->set($key, $value, $this->compress($value), $exTime)) {
+                $this->handler->set(self::timeKey($key), self::setValue(['expire_time' => time() + $time]), 0, $exTime);
                 return true;
+            }
+            return false;
+        } catch (Exception $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 以延迟过期的方式设置过期时间
+     * @param string $key    键名
+     * @param int $time      过期时间(单位:秒)。不大于0，则设为永不过期
+     * @param int $delayTime 延迟过期时间，如果未设置，则使用配置中的设置
+     * @return boolean       是否成功
+     */
+    public function expireDE($key, $time, $delayTime = null) {
+        try {
+            $value = $this->handler->get($key);
+            //值不存在,直接返回 false
+            if ($value === false) {
+                return false;
+            }
+            //设为永不过期
+            if ($time <= 0) {
+                if ($this->handler->set($key, $value, $this->compress($value))) {
+                    $timeValue = $this->handler->get(self::timeKey($key));
+                    if ($timeValue !== false) {
+                        return $this->handler->delete(self::timeKey($key));
+                    }
+                    return true;
+                }
+                return false;
+            }
+            if ($this->hasDE($key)) {
+                $delayTime = $this->getDelayTime($delayTime);
+                $exTime = $time + $delayTime <= 2592000 ? $time + $delayTime : time() + $time + $delayTime;
+                //设置新的过期时间
+                if ($this->handler->set($key, $value, $this->compress($value), $exTime)) {
+                    $this->handler->set(self::timeKey($key), self::setValue(['expire_time' => time() + $time + $delayTime, 'delay_time' => $delayTime]), 0, $exTime);
+                    return true;
+                }
             }
             return false;
         } catch (Exception $ex) {
@@ -415,8 +514,8 @@ class Memcache implements Base, Lock, Incr, Multi {
                 return false;
             }
             if ($this->handler->set($key, $value)) {
-                $expire = $this->handler->get(self::timeKey($key));
-                if ($expire) {
+                $timeValue = $this->handler->get(self::timeKey($key));
+                if ($timeValue !== false) {
                     return $this->handler->delete(self::timeKey($key));
                 }
                 return true;
@@ -504,9 +603,9 @@ class Memcache implements Base, Lock, Incr, Multi {
                 if (!is_numeric($value)) {
                     return false;
                 }
-                $expire = $this->handler->get(self::timeKey($key));
+                $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
                 //未设置过期时间或未过期
-                if ($expire === false || $expire > time()) {
+                if ($timeValue === false || (isset($timeValue['expire_time']) && $timeValue['expire_time'] > time())) {
                     if ($step > 0) {
                         return $this->handler->increment($key, $step);
                     } else {
@@ -547,10 +646,18 @@ class Memcache implements Base, Lock, Incr, Multi {
                 if (!is_numeric($value)) {
                     return false;
                 }
-                $expire = $this->handler->get(self::timeKey($key));
-                //未设置过期时间或未过期
-                if ($expire === false || $expire > time()) {
-                    if ($this->handler->set($key, $value += $float, 0, $expire)) {
+                $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+                //未设置过期时间
+                if ($timeValue === false) {
+                    if ($this->handler->set($key, $value += $float, 0)) {
+                        return $value;
+                    }
+                    return false;
+                }
+                //未过期
+                elseif (isset($timeValue['expire_time']) && $timeValue['expire_time'] > time()) {
+                    $exTime = $timeValue['expire_time'] - time() <= 2592000 ? $timeValue['expire_time'] - time() : $timeValue['expire_time'];
+                    if ($this->handler->set($key, $value += $float, 0, $exTime)) {
                         return $value;
                     }
                     return false;
@@ -590,9 +697,9 @@ class Memcache implements Base, Lock, Incr, Multi {
                 if (!is_numeric($value)) {
                     return false;
                 }
-                $expire = $this->handler->get(self::timeKey($key));
+                $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
                 //未设置过期时间或未过期
-                if ($expire === false || $expire > time()) {
+                if ($timeValue === false || (isset($timeValue['expire_time']) && $timeValue['expire_time'] > time())) {
                     //memcache 新的元素的值不会小于0
                     if ($value < 0 || ($step > 0 && $value < $step)) {
                         if ($this->handler->set($key, $value -= $step, 0)) {

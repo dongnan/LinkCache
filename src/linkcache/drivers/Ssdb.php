@@ -153,7 +153,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
      * 设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
+     * @param int $time     过期时间,默认为-1,<=0则设置为永不过期
      * @return boolean      是否成功
      */
     public function set($key, $value, $time = -1) {
@@ -163,10 +163,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
             } else {
                 $ret = $this->handler->set($key, self::setValue($value));
             }
-            if ($ret !== false) {
-                return true;
-            }
-            return false;
+            return $ret !== false ? true : false;
         } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -179,7 +176,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
      * 当键名不存在时设置键值
      * @param string $key   键名
      * @param mixed $value  键值
-     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
+     * @param int $time     过期时间,默认为-1,<=0则设置为永不过期
      * @return boolean      是否成功
      */
     public function setnx($key, $value, $time = -1) {
@@ -213,26 +210,29 @@ class Ssdb implements Base, Lock, Incr, Multi {
      * 设置键值，将自动延迟过期;<br>
      * 此方法用于缓存对过期要求宽松的数据;<br>
      * 使用此方法设置缓存配合getDE方法可以有效防止惊群现象发生
-     * @param string $key   键名
-     * @param mixed $value  键值
-     * @param int $time     过期时间，小于0则不设置过期时间;为0则设置为永不过期
-     * @return boolean      是否成功
+     * @param string $key    键名
+     * @param mixed $value   键值
+     * @param int $time      过期时间，<=0则设置为永不过期
+     * @param int $delayTime 延迟过期时间，如果未设置，则使用配置中的设置
+     * @return boolean       是否成功
      */
-    public function setDE($key, $value, $time) {
+    public function setDE($key, $value, $time, $delayTime = null) {
         try {
             if ($time > 0) {
+                $delayTime = $this->getDelayTime($delayTime);
                 $ret = $this->handler->batch()
-                        ->setx($key, self::setValue($value), $time + 1800) //延迟过期 1800s
-                        ->setx(self::timeKey($key), $time + time(), $time + 1800)
+                        ->setx($key, self::setValue($value), $time + $delayTime)
+                        ->setx(self::timeKey($key), self::setValue(['expire_time' => time() + $time + $delayTime, 'delay_time' => $delayTime]), $time + $delayTime)
                         ->exec();
                 return $ret !== false ? true : false;
             }
-            //如果存在timeKey且已过期，则删除timeKey；如果$time为0，则设置为永不过期
-            $expireTime = $this->handler->get(self::timeKey($key));
-            if ($expireTime > 0 && $expireTime < time() || $time == 0) {
-                $this->handler->del(self::timeKey($key));
+            $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+            //已过期或 time<=0 时
+            if ($timeValue !== false && (self::isExpiredDE($timeValue) || $time <= 0)) {
+                $this->handler->del($key, self::timeKey($key));
             }
-            return $this->handler->set($key, self::setValue($value));
+            $ret = $this->handler->set($key, self::setValue($value));
+            return $ret !== false ? true : false;
         } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -252,7 +252,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
             if (is_null($value) || $value === false) {
                 return false;
             }
-            return $this->getValue($value);
+            return self::getValue($value);
         } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -264,18 +264,17 @@ class Ssdb implements Base, Lock, Incr, Multi {
     /**
      * 获取延迟过期的键值，与setDE配合使用;<br>
      * 此方法用于获取setDE设置的缓存数据;<br>
-     * 当isExpire为true时，说明key已经过期，需要更新;<br>
+     * 当isExpired为true时，说明key已经过期，需要更新;<br>
      * 更新数据时配合isLock和lock方法，防止惊群现象发生
      * @param string $key       键名
-     * @param boolean $isExpire 是否已经过期
+     * @param boolean $isExpired 是否已经过期
      * @return mixed|false      键值,失败返回false
      */
-    public function getDE($key, &$isExpire = null) {
+    public function getDE($key, &$isExpired = null) {
         try {
-            $expireTime = $this->handler->get(self::timeKey($key));
-            $value = $this->handler->get($key);
-            $isExpire = $value === false || ($expireTime > 0 && $expireTime < time());
-            return $this->getValue($value);
+            $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+            $isExpired = self::isExpiredDE($timeValue);
+            return self::getValue($this->handler->get($key));
         } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -292,10 +291,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
     public function del($key) {
         try {
             $ret = $this->handler->del($key);
-            if ($ret !== false) {
-                return true;
-            }
-            return false;
+            return $ret !== false ? true : false;
         } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -312,6 +308,31 @@ class Ssdb implements Base, Lock, Incr, Multi {
     public function has($key) {
         try {
             return (boolean) $this->handler->exists($key);
+        } catch (SSDBException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 判断延迟过期的键值理论上是否存在
+     * @param string $key   键名
+     * @return boolean      是否存在
+     */
+    public function hasDE($key) {
+        try {
+            $status = $this->handler->exists($key);
+            if ($status) {
+                $timeValue = self::getValue($this->handler->get(self::timeKey($key)));
+                //不存在或已过期
+                if ($timeValue !== false && self::isExpiredDE($timeValue)) {
+                    return false;
+                }
+                return true;
+            }
+            return false;
         } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -341,6 +362,34 @@ class Ssdb implements Base, Lock, Incr, Multi {
     }
 
     /**
+     * 获取延迟过期的键值理论生存剩余时间
+     * @param string $key   键名
+     * @return int|false    生存剩余时间(单位:秒) -1表示永不过期,-2表示键值不存在,失败返回false
+     */
+    public function ttlDE($key) {
+        try {
+            //不存在
+            if (!$this->handler->exists($key)) {
+                return -2;
+            }
+            $ttl = $this->handler->ttl($key);
+            if ($ttl > 0) {
+                $value = self::getValue($this->handler->get(self::timeKey($key)));
+                if (isset($value['expire_time']) && isset($value['delay_time']) && $value['expire_time'] > 0) {
+                    $ttl = $value['expire_time'] - $value['delay_time'] - time();
+                    return $ttl > 0 ? $ttl : -2;
+                }
+            }
+            return $ttl;
+        } catch (SSDBException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
      * 设置过期时间
      * @param string $key   键名
      * @param int $time     过期时间(单位:秒)。不大于0，则设为永不过期
@@ -355,13 +404,46 @@ class Ssdb implements Base, Lock, Incr, Multi {
             //$time不大于0，则永不过期
             if ($time <= 0) {
                 $ret = $this->handler->set($key, $value);
-                if ($ret !== false) {
-                    return true;
-                }
-                return false;
+                return $ret !== false ? true : false;
             } else {
                 return (boolean) $this->handler->expire($key, $time);
             }
+        } catch (SSDBException $ex) {
+            self::exception($ex);
+            //连接状态置为false
+            $this->isConnected = false;
+        }
+        return false;
+    }
+
+    /**
+     * 以延迟过期的方式设置过期时间
+     * @param string $key    键名
+     * @param int $time      过期时间(单位:秒)。不大于0，则设为永不过期
+     * @param int $delayTime 延迟过期时间，如果未设置，则使用配置中的设置
+     * @return boolean       是否成功
+     */
+    public function expireDE($key, $time, $delayTime = null) {
+        try {
+            $value = $this->handler->get($key);
+            if (is_null($value) || $value === false) {
+                return false;
+            }
+            //$time不大于0，则永不过期
+            if ($time <= 0) {
+                $this->handler->del(self::timeKey($key));
+                $ret = $this->handler->set($key, $value);
+                return $ret !== false ? true : false;
+            }
+            if ($this->hasDE($key)) {
+                $delayTime = $this->getDelayTime($delayTime);
+                $ret = $this->handler->batch()
+                        ->setx($key, self::setValue($value), $time + $delayTime)
+                        ->setx(self::timeKey($key), self::setValue(['expire_time' => time() + $time + $delayTime, 'delay_time' => $delayTime]), $time + $delayTime)
+                        ->exec();
+                return $ret !== false ? true : false;
+            }
+            return false;
         } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -377,6 +459,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
      */
     public function persist($key) {
         try {
+            $this->handler->del(self::timeKey($key));
             $value = $this->handler->get($key);
             if (is_null($value) || $value === false) {
                 return false;
@@ -408,10 +491,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
     public function lock($key, $time = 60) {
         try {
             $ret = $this->setnx(self::lockKey($key), 1, $time);
-            if ($ret !== false) {
-                return true;
-            }
-            return false;
+            return $ret !== false ? true : false;
         } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false
@@ -532,10 +612,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
                 $value = self::setValue($value);
             }
             $ret = $this->handler->multi_set($sets);
-            if ($ret !== false) {
-                return true;
-            }
-            return false;
+            return $ret !== false ? true : false;
         } catch (SSDBException $ex) {
             self::exception($ex);
             //连接状态置为false

@@ -22,6 +22,8 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->set('test1', 1));
         $this->assertTrue($cache->set('test2', [1, 2], 1));
+        $this->assertTrue($cache->set('test_change', [2, 3], 1));
+        $this->assertTrue($cache->set('test_change', [3, 4]));
         $this->assertTrue($cache->set('testDel', 'del'));
         $this->assertTrue($cache->set('notNum', 'notNum'));
     }
@@ -32,11 +34,36 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
     public function testGet() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertEquals(1, $cache->get('test1'));
-        $this->assertEquals([1, 2], $cache->get('test2'));
+        $this->assertArraySubset([1, 2], $cache->get('test2'), true);
+        $this->assertArraySubset([3, 4], $cache->get('test_change'), true);
         $this->assertEquals('del', $cache->get('testDel'));
         $this->assertFalse($cache->get('notExist'));
         sleep(2);
         $this->assertFalse($cache->get('test2'));
+        //不会过期
+        $this->assertArraySubset([3, 4], $cache->get('test_change'), true);
+    }
+
+    public function testSetDE() {
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertTrue($cache->setDE('test3', 'delay_expire', 1));
+        $this->assertTrue($cache->setDE('test4', ['delay' => 1, 'expire' => 2], 1));
+    }
+
+    /**
+     * @depends testSetDE
+     */
+    public function testGetDE() {
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertEquals('delay_expire', $cache->getDE('test3'));
+        $this->assertArraySubset(['delay' => 1, 'expire' => 2], $cache->getDE('test4'), true);
+        sleep(2);
+        $isExpired1 = null;
+        $this->assertEquals('delay_expire', $cache->getDE('test3', $isExpired1));
+        $this->assertTrue($isExpired1);
+        $isExpired2 = null;
+        $this->assertArraySubset(['delay' => 1, 'expire' => 2], $cache->getDE('test4', $isExpired2), true);
+        $this->assertTrue($isExpired2);
     }
 
     /**
@@ -69,6 +96,16 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $this->assertFalse($cache->has('testHas'));
     }
 
+    /**
+     * @depends testSetDE
+     * @depends testGetDE
+     */
+    public function testHasDE() {
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertTrue($cache->has('test3'));
+        $this->assertFalse($cache->hasDE('test3'));
+    }
+
     public function testPersist() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testPersist'));
@@ -80,14 +117,32 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testExpire'));
         $this->assertTrue($cache->set('testExpire', 'expire'));
+        $this->assertTrue($cache->set('testExpirePersist', 'expire', 1));
         $this->assertTrue($cache->expire('testExpire', 1));
+        $this->assertTrue($cache->expire('testExpirePersist', -1));
     }
 
     public function testExpireAt() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('testExpireAt'));
         $this->assertTrue($cache->set('testExpireAt', 'expireAt'));
+        $this->assertTrue($cache->set('testExpireAtDel', 'expireAtDel'));
         $this->assertTrue($cache->expireAt('testExpireAt', time() + 1));
+        $this->assertTrue($cache->expireAt('testExpireAtDel', time() - 1));
+    }
+
+    public function testExpireDE() {
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertTrue($cache->del('testExpireDE'));
+        $this->assertTrue($cache->set('testExpireDE', 'expireDE'));
+        $this->assertTrue($cache->expireDE('testExpireDE', 1));
+    }
+
+    public function testExpireAtDE() {
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertTrue($cache->del('testExpireAtDE'));
+        $this->assertTrue($cache->set('testExpireAtDE', 'expireAtDE'));
+        $this->assertTrue($cache->expireAtDE('testExpireAtDE', time() + 1));
     }
 
     /**
@@ -98,13 +153,28 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
      * @depends testPersist
      */
     public function testTtl() {
-        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         sleep(2);
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertEquals(-2, $cache->ttl('testExpire'));
+        $this->assertEquals(-1, $cache->ttl('testExpirePersist'));
         $this->assertEquals(-2, $cache->ttl('testExpireAt'));
+        $this->assertEquals(-2, $cache->ttl('testExpireAtDel'));
         $this->assertEquals(-1, $cache->ttl('testPersist'));
         $this->assertEquals(-2, $cache->ttl('testNotExist'));
         $this->assertEquals(-2, $cache->ttl('setnx2'));
+    }
+
+    /**
+     * @depends testExpireDE
+     * @depends testExpireAtDE
+     */
+    public function testTtlDE() {
+        sleep(2);
+        $cache = \linkcache\Cache::getInstance($this->cacheDriver);
+        $this->assertGreaterThan(0, $cache->ttl('testExpireDE'));
+        $this->assertEquals(-2, $cache->ttlDE('testExpireDE'));
+        $this->assertGreaterThan(0, $cache->ttl('testExpireAtDE'));
+        $this->assertEquals(-2, $cache->ttlDE('testExpireAtDE'));
     }
 
     public function testLock() {
@@ -151,7 +221,7 @@ class TestDriverFiles extends \PHPUnit_Framework_TestCase {
     public function testIncrByFloat() {
         $cache = \linkcache\Cache::getInstance($this->cacheDriver);
         $this->assertTrue($cache->del('incrByFloat'));
-        $this->assertEquals(1.5, $cache->incrByFloat('incrByFloat', 1.5), '', 0.01);
+        $this->assertEquals(1.5, $cache->incrByFloat('incrByFloat', 1.5), '', 0.1);
         $this->assertEquals(5.001, $cache->incrByFloat('incrByFloat', 3.501), '', 0.0001);
         $this->assertEquals(2.5, $cache->incrByFloat('incrByFloat', -2.501), '', 0.0001);
         $this->assertFalse($cache->incrByFloat('incrByFloat', 'str'));
