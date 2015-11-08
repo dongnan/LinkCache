@@ -35,17 +35,25 @@ $ composer require dongnan/linkcache
 
 # 如何使用
 
+(提示:如果以下锚点定位的链接错误，导致页面找不到等问题，请访问 https://github.com/dongnan/LinkCache 查看文档)
+
 - [config](#config) - 配置信息
 - [instance](#instance) - 缓存实例化
 - [getDriver](#getDriver) - 获取缓存驱动实例
 - [set](#set) - 将参数中的 `value`设置为 `key` 的值
 - [setnx](#setnx) - 当缓存中不存在 `key` 时，将参数中的 `value` 设置为 `key` 的值
+- [setDE](#setDE) - 将参数中的 `value`设置为 `key` 的值，`key` 将自动延迟过期
 - [get](#get) - 获取 `key` 对应的值
+- [getDE](#getDE) - 获取 `key` 对应的值，与 `setDE` 配合使用
 - [del](#del) - 删除 `key`
 - [has](#has) - 判断 `key` 是否存在
+- [hasDE](#hasDE) - 判断延迟过期的 `key` 理论上是否存在
 - [ttl](#ttl) - 获取 `key` 的生存时间(单位:s)
+- [ttlDE](#ttlDE) - 获取延迟过期的 `key` 理论上的生存时间(单位:s)
 - [expire](#expire) - 设置一个 `key` 的生存时间(单位:s)
+- [expireDE](#expireDE) - 以延迟过期的方式设置一个 `key` 的生存时间(单位:s)
 - [expireAt](#expireAt) - 用UNIX时间戳设置一个 `key` 的过期时间
+- [expireAtDE](#expireAtDE) - 以延迟过期的方式用UNIX时间戳设置一个 `key` 的过期时间
 - [persist](#persist) - 删除一个 `key` 的生存时间，使其永不过期
 - [lock](#lock) - 对 `key` 设置锁标记（此锁并不对 `key` 做修改限制,仅为 `key` 的锁标记）
 - [isLock](#isLock) - 判断 `key` 是否有锁标记
@@ -140,8 +148,8 @@ $ composer require dongnan/linkcache
 
 #### 参数
 - key - 字符串
-- value	- 除了 resource 类型的所有的值
-- time - (可选参数) key的生存时间，单位是秒(s)
+- value	- 除了 `resource` 类型的所有的值
+- time - (可选参数) `key` 的生存时间，单位是秒(s)
 
 #### 返回值
 Boolean 如果设置成功，返回 `true`; 如果设置失败，返回 `false`
@@ -162,8 +170,8 @@ Boolean 如果设置成功，返回 `true`; 如果设置失败，返回 `false`
 
 #### 参数
 - key - 字符串
-- value	- 除了 resource 类型的所有的值
-- time - (可选参数) key的生存时间，单位是秒(s)
+- value	- 除了 `resource` 类型的所有的值
+- time - (可选参数) `key` 的生存时间，单位是秒(s)
 
 #### 返回值
 Boolean - 如果设置成功，返回 `true`; 如果设置失败，返回 `false`
@@ -176,6 +184,31 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败，返回 `false
 	$status = $cache->setnx($key, $value);
 	//设置有过期时间的缓存
 	$status = $cache->setnx($key, $value, $time);
+```
+
+## setDE
+
+将参数中的 `value`设置为 `key` 的值，`key` 将自动延迟过期
+
+#### 参数
+- key - 字符串
+- value	- 除了 `resource` 类型的所有的值
+- time - `key` 的生存时间，单位是秒(s)
+- delayTime - (可选参数) 延迟过期时间，如果未设置，则使用配置中的设置
+
+#### 返回值
+Boolean - 如果设置成功，返回 `true`; 如果设置失败，返回 `false`
+
+#### 例子
+
+```
+<?php
+	//设置不过期的缓存
+	$status = $cache->setDE($key, $value);
+	//设置有过期时间的缓存
+	$status = $cache->setDE($key, $value, $time);
+	//设置有过期时间的缓存并指定延迟过期时间
+	$status = $cache->setDE($key, $value, $time, $delayTime);
 ```
 
 ## get
@@ -194,6 +227,29 @@ Mixed - `key` 对应的值; 如果获取失败或 `key` 不存在，返回 `fals
 <?php
 	//获取key对应的值
 	$value = $cache->get($key);
+```
+
+## getDE
+
+获取 `key` 对应的值，与 `setDE` 配合使用
+
+#### 参数
+- key - 字符串
+- isExpired - `key` 理论上是否已经过期，这是一个引用变量，不需要初始化
+
+#### 返回值
+Mixed - `key` 对应的值; 如果获取失败或 `key` 不存在，返回 `false`
+
+#### 例子
+
+```
+<?php
+	//获取key对应的值
+	$value = $cache->getDE($key, $isExpired);
+	//如果已经过期，处理其他逻辑
+	if ($isExpired) {
+		//TODO
+	}
 ```
 
 ## del
@@ -232,6 +288,24 @@ Boolean - 如果 `key` 存在，返回 `true`；如果 `key` 不存在，返回 
 	$status = $cache->has($key);
 ```
 
+## hasDE
+
+判断延迟过期的 `key` 理论上是否存在。设置自动延期的 `key`，过期时间实际会被修改，用方法 `has` 判断的话，可能 `key` 仍然存在，但是理论上已经过期了
+
+#### 参数
+- key - 字符串
+
+#### 返回值
+Boolean - 如果 `key` 存在，返回 `true`；如果 `key` 不存在，返回 `false`
+
+#### 例子
+
+```
+<?php
+	//判断key是否存在
+	$status = $cache->hasDE($key);
+```
+
 ## ttl
 
 获取 `key` 的生存时间(单位:s)
@@ -250,13 +324,31 @@ Mixed - 生存剩余时间(单位:秒) `-1` 表示永不过期,`-2` 表示 `key`
 	$ttl = $cache->ttl($key);
 ```
 
+## ttlDE
+
+获取延迟过期的 `key` 理论上的生存时间(单位:s)。
+
+#### 参数
+- key - 字符串
+
+#### 返回值
+Mixed - 生存剩余时间(单位:秒) `-1` 表示永不过期,`-2` 表示 `key` 不存在,失败返回 `false`
+
+#### 例子
+
+```
+<?php
+	//获取延迟过期的 key 理论上的生存时间(单位:s)
+	$ttl = $cache->ttlDE($key);
+```
+
 ## expire
 
 设置一个 `key` 的生存时间(单位:s)
 
 #### 参数
 - key - 字符串
-- time - 整数，key的生存时间(单位:s)
+- time - 整数，`key` 的生存时间(单位:s)
 
 #### 返回值
 Boolean - 如果设置成功，返回 `true`; 如果设置失败或 `key` 不存在，返回 `false`
@@ -267,6 +359,28 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败或 `key` 不存
 <?php
 	//设置一个key的生存时间
 	$status = $cache->expire($key, $time);
+```
+
+## expireDE
+
+以延迟过期的方式设置一个 `key` 的生存时间(单位:s)
+
+#### 参数
+- key - 字符串
+- time - 整数，`key` 的生存时间(单位:s)
+- delayTime - (可选参数) 延迟过期时间，如果未设置，则使用配置中的设置
+
+#### 返回值
+Boolean - 如果设置成功，返回 `true`; 如果设置失败或 `key` 不存在，返回 `false`
+
+#### 例子
+
+```
+<?php
+	//以延迟过期的方式设置一个 key 的生存时间(单位:s)
+	$status = $cache->expireDE($key, $time);
+	//自定义延迟过期时间
+	$status = $cache->expireDE($key, $time, $delayTime);
 ```
 
 ## expireAt
@@ -286,6 +400,28 @@ Boolean - 如果设置成功，返回 `true`; 如果设置失败或 `key` 不存
 <?php
 	//用UNIX时间戳设置一个key的过期时间
 	$status = $cache->expireAt($key, $time);
+```
+
+## expireAtDE
+
+以延迟过期的方式用UNIX时间戳设置一个 `key` 的过期时间
+
+#### 参数
+- key - 字符串
+- time - UNIX时间戳(单位:s)
+- delayTime - (可选参数) 延迟过期时间，如果未设置，则使用配置中的设置
+
+#### 返回值
+Boolean - 如果设置成功，返回 `true`; 如果设置失败或 `key` 不存在，返回 `false`
+
+#### 例子
+
+```
+<?php
+	//用UNIX时间戳设置一个key的过期时间
+	$status = $cache->expireAtDE($key, $time);
+	//自定义延迟过期时间
+	$status = $cache->expireAtDE($key, $time, $delayTime);
 ```
 
 ## persist
@@ -521,6 +657,63 @@ Boolean - 如果删除成功，返回 `true`; 如果删除失败，返回 `false
 	$status = $cache->mDel($keys);
 ```
 
+# 如何防止惊群
+
+## 什么是惊群
+首先，我们使用缓存的主要目的就是为了高并发情况下的高可用，换句话说，如果在使用了缓存的高并发的系统下，如果缓存突然都消失了，会发生什么？首先数据库的压力必然骤增，接着负载迅速升高，响应时间变慢，进程/线程由于响应时间变慢导致集压并剧增，这就是惊群。惊群的后果就是系统不可用甚至宕机。当然这是一个非常极端的例子，但是能很好的解释惊群现象。真实环境中，可能会有个一些页面是访问非常频繁的，如果这些页面的缓存在同一时间或相近的时间突然过期了，在高并发的情况下也会产生惊群现象。
+
+## 如何避免惊群
+知道了什么是惊群，就不难防止惊群了。首先，避免缓存在同一时间过期；其次，如果缓存过期，同一缓存数据不要让所有并发的进程/线程都去触发更新。
+
+### 例子
+
+`LinkCache` 为此专门做了优化，使用 `LinkCache` 提供的一些特殊方法，可以有效的防止惊群现象。以下是简单的示例(伪代码)：
+
+```
+<?php
+	/* LinkCache专为防止惊群现象设计的方法包括：
+	 * setDE,getDE,hasDE,ttlDE,expireDE,expireAtDE,lock,isLock,unLock
+	 * 比较常用的是:setDE,getDE,lock
+	 */
+	
+	//设置缓存
+	$cache->setDE($key,$value,$time);
+
+	//获取缓存
+	$value = $cache->getDE($key,$isExpired);
+
+	//情况1，$value存在，$isExpired=true，不需要更新缓存
+	if($value !== false){
+		//your code
+	}
+
+	//情况2，$value存在，$isExpired=false，需要更新缓存
+	if($value !== false){
+		//your code
+	}
+	//更新缓存
+	if($isExpired === false){
+		//对key加锁标记，如果成功，则处理更新缓存操作 (锁标记默认过期时间是60s，也可自定义过期时间)
+		if($cache->lock($key)){
+			//更新缓存
+		}
+	}
+	
+	//情况3，$value不存在，需要更新缓存
+	if($value === false){
+		//对key加锁标记，如果成功，则处理更新缓存操作 (锁标记默认过期时间是60s，也可自定义过期时间)
+		if($cache->lock($key)){
+			//更新缓存
+		}
+		//如果失败，说明已经有进程/线程对key加了锁标记，正在更新缓存
+		else{
+			//如果并发大，建议此处做特殊处理，不要去更新缓存
+			
+			//特殊处理的代码
+		}
+	}
+```
+
 # 默认情况说明
 
 - [Cache](#cache) - `\linkcache\Cache`
@@ -721,7 +914,7 @@ Boolean - 如果删除成功，返回 `true`; 如果删除失败，返回 `false
 			     * 设置键值
 			     * @param string $key   键名
 			     * @param mixed $value  键值
-			     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
+			     * @param int $time     过期时间,默认为-1,<=0则设置为永不过期
 			     * @return boolean      是否成功
 			     */
 			    public function set($key, $value, $time = -1) {
@@ -732,7 +925,7 @@ Boolean - 如果删除成功，返回 `true`; 如果删除失败，返回 `false
 			     * 当键名不存在时设置键值
 			     * @param string $key   键名
 			     * @param mixed $value  键值
-			     * @param int $time     过期时间,默认为-1,不设置过期时间;为0则设置为永不过期
+			     * @param int $time     过期时间,默认为-1,<=0则设置为永不过期
 			     * @return boolean      是否成功
 			     */
 			    public function setnx($key, $value, $time = -1) {
@@ -836,9 +1029,9 @@ Boolean - 如果删除成功，返回 `true`; 如果删除失败，返回 `false
 
 		....................
 		
-		Time: 3.24 seconds, Memory: 8.75Mb
-		
-		OK (20 tests, 75 assertions)
+		Time: 8.24 seconds, Memory: 8.75Mb
+
+		OK (26 tests, 105 assertions)
 		```
 
 # LICENSE
