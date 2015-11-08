@@ -39,33 +39,33 @@ $ composer require dongnan/linkcache
 
 - [config](#config) - 配置信息
 - [instance](#instance) - 缓存实例化
-- [getDriver](#getDriver) - 获取缓存驱动实例
+- [getDriver](#getdriver) - 获取缓存驱动实例
 - [set](#set) - 将参数中的 `value`设置为 `key` 的值
 - [setnx](#setnx) - 当缓存中不存在 `key` 时，将参数中的 `value` 设置为 `key` 的值
-- [setDE](#setDE) - 将参数中的 `value`设置为 `key` 的值，`key` 将自动延迟过期
+- [setDE](#setde) - 将参数中的 `value`设置为 `key` 的值，`key` 将自动延迟过期
 - [get](#get) - 获取 `key` 对应的值
-- [getDE](#getDE) - 获取 `key` 对应的值，与 `setDE` 配合使用
+- [getDE](#getde) - 获取 `key` 对应的值，与 `setDE` 配合使用
 - [del](#del) - 删除 `key`
 - [has](#has) - 判断 `key` 是否存在
-- [hasDE](#hasDE) - 判断延迟过期的 `key` 理论上是否存在
+- [hasDE](#hasde) - 判断延迟过期的 `key` 理论上是否存在
 - [ttl](#ttl) - 获取 `key` 的生存时间(单位:s)
-- [ttlDE](#ttlDE) - 获取延迟过期的 `key` 理论上的生存时间(单位:s)
+- [ttlDE](#ttlde) - 获取延迟过期的 `key` 理论上的生存时间(单位:s)
 - [expire](#expire) - 设置一个 `key` 的生存时间(单位:s)
-- [expireDE](#expireDE) - 以延迟过期的方式设置一个 `key` 的生存时间(单位:s)
-- [expireAt](#expireAt) - 用UNIX时间戳设置一个 `key` 的过期时间
-- [expireAtDE](#expireAtDE) - 以延迟过期的方式用UNIX时间戳设置一个 `key` 的过期时间
+- [expireDE](#expirede) - 以延迟过期的方式设置一个 `key` 的生存时间(单位:s)
+- [expireAt](#expireat) - 用UNIX时间戳设置一个 `key` 的过期时间
+- [expireAtDE](#expireatde) - 以延迟过期的方式用UNIX时间戳设置一个 `key` 的过期时间
 - [persist](#persist) - 删除一个 `key` 的生存时间，使其永不过期
 - [lock](#lock) - 对 `key` 设置锁标记（此锁并不对 `key` 做修改限制,仅为 `key` 的锁标记）
-- [isLock](#isLock) - 判断 `key` 是否有锁标记
-- [unLock](#unLock) - 移除 `key` 的锁标记
+- [isLock](#islock) - 判断 `key` 是否有锁标记
+- [unLock](#unlock) - 移除 `key` 的锁标记
 - [incr](#incr) - 设置 `key` 的值按整数递增
-- [incrByFloat](#incrByFloat) - 设置 `key` 的值按浮点数递增
+- [incrByFloat](#incrbyfloat) - 设置 `key` 的值按浮点数递增
 - [decr](#decr) - 设置 `key` 的值按整数递减
-- [mSet](#mSet) - 批量设置多个 `key` 对应的值
-- [mSetNX](#mSetNX) - 当缓存中不存在 `key` 时，批量设置多个 `key` 对应的值
-- [mGet](#mGet) - 获取所有给定 `key` 的值
-- [mHas](#mHas) - 批量判断 `key` 是否存在
-- [mDel](#mDel) - 批量删除 `key`
+- [mSet](#mset) - 批量设置多个 `key` 对应的值
+- [mSetNX](#msetnx) - 当缓存中不存在 `key` 时，批量设置多个 `key` 对应的值
+- [mGet](#mget) - 获取所有给定 `key` 的值
+- [mHas](#mhas) - 批量判断 `key` 是否存在
+- [mDel](#mdel) - 批量删除 `key`
 
 ## config
 
