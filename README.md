@@ -682,17 +682,17 @@ Boolean - 如果删除成功，返回 `true`; 如果删除失败，返回 `false
 	//获取缓存
 	$value = $cache->getDE($key,$isExpired);
 
-	//情况1，$value存在，$isExpired=true，不需要更新缓存
+	//情况1，$value存在，$isExpired=false，不需要更新缓存
 	if($value !== false){
 		//your code
 	}
 
-	//情况2，$value存在，$isExpired=false，需要更新缓存
+	//情况2，$value存在，$isExpired=true，需要更新缓存
 	if($value !== false){
 		//your code
 	}
 	//更新缓存
-	if($isExpired === false){
+	if($isExpired === true){
 		//对key加锁标记，如果成功，则处理更新缓存操作 (锁标记默认过期时间是60s，也可自定义过期时间)
 		if($cache->lock($key)){
 			//更新缓存
