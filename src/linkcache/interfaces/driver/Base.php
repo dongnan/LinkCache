@@ -50,7 +50,7 @@ interface Base {
      * @param int $delayTime 延迟过期时间，如果未设置，则使用配置中的设置
      * @return boolean       是否成功
      */
-    public function setDE($key, $value, $time);
+    public function setDE($key, $value, $time, $delayTime = null);
 
     /**
      * 获取键值

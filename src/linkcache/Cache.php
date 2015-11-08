@@ -193,17 +193,18 @@ class Cache {
      * 设置键值，将自动延迟过期;<br>
      * 此方法用于缓存对过期要求宽松的数据;<br>
      * 使用此方法设置缓存配合getDE方法可以有效防止惊群现象发生
-     * @param string $key   键名
-     * @param mixed $value  键值
-     * @param int $time     过期时间，<=0则设置为永不过期
-     * @return boolean      是否成功
+     * @param string $key    键名
+     * @param mixed $value   键值
+     * @param int $time      过期时间，<=0则设置为永不过期
+     * @param int $delayTime 延迟过期时间，如果未设置，则使用配置中的设置
+     * @return boolean       是否成功
      */
-    public function setDE($key, $value, $time) {
+    public function setDE($key, $value, $time, $delayTime = null) {
         if ($this->driver->checkDriver()) {
-            return $this->driver->setDE($key, $value, $time);
+            return $this->driver->setDE($key, $value, $time, $delayTime);
         }
         if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
-            return $this->driver->backup()->setDE($key, $value, $time);
+            return $this->driver->backup()->setDE($key, $value, $time, $delayTime);
         }
         return false;
     }
