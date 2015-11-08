@@ -161,6 +161,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
             if ($time > 0) {
                 $ret = $this->handler->setx($key, self::setValue($value), $time);
             } else {
+                $this->handler->del($key);
                 $ret = $this->handler->set($key, self::setValue($value));
             }
             return $ret !== false ? true : false;
@@ -231,6 +232,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
             if ($timeValue !== false && (self::isExpiredDE($timeValue) || $time <= 0)) {
                 $this->handler->del($key, self::timeKey($key));
             }
+            $this->handler->del($key);
             $ret = $this->handler->set($key, self::setValue($value));
             return $ret !== false ? true : false;
         } catch (SSDBException $ex) {
@@ -290,7 +292,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
      */
     public function del($key) {
         try {
-            $ret = $this->handler->del($key);
+            $ret = $this->handler->multi_del([$key, self::timeKey($key)]);
             return $ret !== false ? true : false;
         } catch (SSDBException $ex) {
             self::exception($ex);
@@ -403,6 +405,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
             }
             //$time不大于0，则永不过期
             if ($time <= 0) {
+                $this->handler->multi_del([$key, self::timeKey($key)]);
                 $ret = $this->handler->set($key, $value);
                 return $ret !== false ? true : false;
             } else {
@@ -431,7 +434,7 @@ class Ssdb implements Base, Lock, Incr, Multi {
             }
             //$time不大于0，则永不过期
             if ($time <= 0) {
-                $this->handler->del(self::timeKey($key));
+                $this->handler->multi_del([$key, self::timeKey($key)]);
                 $ret = $this->handler->set($key, $value);
                 return $ret !== false ? true : false;
             }
@@ -608,10 +611,13 @@ class Ssdb implements Base, Lock, Incr, Multi {
      */
     public function mSet($sets) {
         try {
-            foreach ($sets as &$value) {
+            $keys = [];
+            foreach ($sets as $key => &$value) {
                 $value = self::setValue($value);
+                $keys[] = $key;
+                $keys[] = self::timeKey($key);
             }
-            $ret = $this->handler->multi_set($sets);
+            $ret = $this->handler->batch()->multi_del($keys)->multi_set($sets)->exec();
             return $ret !== false ? true : false;
         } catch (SSDBException $ex) {
             self::exception($ex);
@@ -704,7 +710,11 @@ class Ssdb implements Base, Lock, Incr, Multi {
      */
     public function mDel($keys) {
         try {
-            $ret = $this->handler->multi_del($keys);
+            $timeKeys = [];
+            foreach ($keys as $key) {
+                $timeKeys[] = self::timeKey($key);
+            }
+            $ret = $this->handler->multi_del(array_merge($keys, $timeKeys));
             if ($ret > 0) {
                 return true;
             } elseif ($ret === 0) {
