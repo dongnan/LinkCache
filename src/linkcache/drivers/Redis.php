@@ -282,7 +282,7 @@ class Redis implements Base, Lock, Incr, Multi {
      */
     public function del($key) {
         try {
-            $ret = $this->handler->del($key);
+            $ret = $this->handler->del($key, self::timeKey($key));
             if ($ret > 0 || ($ret === 0 && !$this->handler->exists($key))) {
                 return true;
             }

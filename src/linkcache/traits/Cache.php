@@ -52,8 +52,8 @@ trait Cache {
      * @return mixed
      */
     static public function getValue($value) {
-        if (!$value) {
-            return $value;
+        if (is_null($value) || $value === false) {
+            return false;
         }
         if (!is_numeric($value)) {
             $value = unserialize($value);
