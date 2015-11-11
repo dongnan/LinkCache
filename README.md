@@ -731,36 +731,35 @@ Boolean - 如果删除成功，返回 `true`; 如果删除失败，返回 `false
 - 默认使用的缓存驱动： `files`
 - 默认使用的备用驱动： `files`
 - `memcache`、`redis`、`ssdb` 等缓存驱动的默认配置均参考官方默认配置
-- 自定义配置支持非驱动类型的key，但配置信息中需要有 `driver_type` 属性，否则会抛异常
-	- 例如：
-	```
-	<?php
-		use \linkcache\Cache;
-		$config = [
-			'redis_m_db_1' => [
-				'driver_type' => 'redis',
-				'host' => '127.0.0.1',
-				'port' => 6380,
-				'database' => 1
-			],
-			'redis_m_db_2' => [
-				'driver_type' => 'redis',
-				'host' => '127.0.0.1',
-				'port' => 6380,
-				'database' => 2
-			],
-			'redis_s_db' => [
-				'driver_type' => 'redis',
-				'host' => '127.0.0.1',
-				'port' => 6381
-			]
-		];
-		Cache::setConfig($config);
-		//根据自定义配置实例化
-		$redisM1 = new Cache('redis_m_db_1');
-		$redisM2 = new Cache('redis_m_db_2');
-		$redisS0 = new Cache('redis_s_db');
-	```
+- 自定义配置支持非驱动类型的key，但配置信息中需要有 `driver_type` 属性，否则会抛异常，示例如下：
+```
+<?php
+	use \linkcache\Cache;
+	$config = [
+		'redis_m_db_1' => [
+			'driver_type' => 'redis',
+			'host' => '127.0.0.1',
+			'port' => 6380,
+			'database' => 1
+		],
+		'redis_m_db_2' => [
+			'driver_type' => 'redis',
+			'host' => '127.0.0.1',
+			'port' => 6380,
+			'database' => 2
+		],
+		'redis_s_db' => [
+			'driver_type' => 'redis',
+			'host' => '127.0.0.1',
+			'port' => 6381
+		]
+	];
+	Cache::setConfig($config);
+	//根据自定义配置实例化
+	$redisM1 = new Cache('redis_m_db_1');
+	$redisM2 = new Cache('redis_m_db_2');
+	$redisS0 = new Cache('redis_s_db');
+```
 
 ## drivers
 
