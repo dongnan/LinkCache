@@ -719,7 +719,7 @@ class Cache {
     }
 
     public function __unset($name) {
-        $this->del($name);
+        return $this->del($name);
     }
 
     /**
@@ -731,11 +731,8 @@ class Cache {
      */
     public function __call($method, $args) {
         if ($this->driver->checkDriver()) {
-            if (method_exists($this->driver, $method)) {
-                return call_user_func_array(array($this->driver, $method), $args);
-            } else {
-                throw new \Exception(__CLASS__ . ":{$method} is not exists!");
-            }
+            //由于driver中定义了__call方法，此处不能判断方法是否存在。
+            return call_user_func_array(array($this->driver, $method), $args);
         }
         //fallback执行中出现异常直接捕获
         if ($this->driver->isFallback() && $this->type !== self::$config['fallback']) {
