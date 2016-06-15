@@ -67,15 +67,15 @@ class Redis implements Base, Lock, Incr, Multi {
     }
 
     public function __set($name, $value) {
-        return $this->handler->set($name, $value);
+        return $this->set($name, $value);
     }
 
     public function __get($name) {
-        return $this->handler->get($name);
+        return $this->get($name);
     }
 
     public function __unset($name) {
-        $this->handler->del($name);
+        return $this->del($name);
     }
 
     /**
@@ -86,7 +86,6 @@ class Redis implements Base, Lock, Incr, Multi {
      * @throws \Exception
      */
     public function __call($method, $args) {
-
         if (method_exists($this->handler, $method)) {
             return call_user_func_array(array($this->handler, $method), $args);
         } else {

@@ -86,12 +86,8 @@ class Ssdb implements Base, Lock, Incr, Multi {
      * @throws \Exception
      */
     public function __call($method, $args) {
-
-        if (method_exists($this->handler, $method)) {
-            return call_user_func_array(array($this->handler, $method), $args);
-        } else {
-            throw new \Exception(__CLASS__ . ":{$method} is not exists!");
-        }
+        //由于SSDB也使用了__call方法执行大多数命令，此处不能判断方法是否存在。
+        return call_user_func_array(array($this->handler, $method), $args);
     }
 
     /**

@@ -71,6 +71,33 @@ class Memcache implements Base, Lock, Incr, Multi {
         }
         $this->initServers();
     }
+    
+    public function __set($name, $value) {
+        return $this->set($name, $value);
+    }
+
+    public function __get($name) {
+        return $this->get($name);
+    }
+
+    public function __unset($name) {
+        return $this->del($name);
+    }
+
+    /**
+     * Call the memcache handler's method
+     * @param string $method
+     * @param array $args
+     * @return mixed
+     * @throws \Exception
+     */
+    public function __call($method, $args) {
+        if (method_exists($this->handler, $method)) {
+            return call_user_func_array(array($this->handler, $method), $args);
+        } else {
+            throw new \Exception(__CLASS__ . ":{$method} is not exists!");
+        }
+    }
 
     /**
      * 初始化servers

@@ -40,6 +40,18 @@ class Yac extends DriverSimple {
         $prefix = isset($config['prefix']) ? $config['prefix'] : '';
         $this->handler = new \Yac($prefix);
     }
+    
+    public function __set($name, $value) {
+        return $this->set($name, $value);
+    }
+
+    public function __get($name) {
+        return $this->get($name);
+    }
+
+    public function __unset($name) {
+        return $this->del($name);
+    }
 
     /**
      * 检查驱动是否可用

@@ -41,7 +41,7 @@ abstract class DriverSimple implements Base {
      * @return boolean      是否成功
      */
     abstract protected function delOne($key);
-
+    
     /**
      * 设置键值
      * @param string $key   键名
