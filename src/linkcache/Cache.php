@@ -99,10 +99,21 @@ class Cache {
         if (!isset(self::$_drivers[$key])) {
             $class = '\\linkcache\\drivers\\' . ucwords(strtolower($type));
             if (class_exists($class)) {
-                if (isset(self::$config[$this->type])) {
+                if (isset(self::$config[$this->type]) && count($config) == 1) {
                     $config = array_merge(self::$config[$this->type], $config);
                 }
-                self::$_drivers[$key] = new $class($config);
+                // 支持多redis配置
+                if ($type == 'redis' && count($config) > 1) {
+                    shuffle($config);
+                    foreach ($config as $conf) {
+                        self::$_drivers[$key] = new $class($conf);
+                        if (self::$_drivers[$key]->checkDriver()) {
+                            break;
+                        }
+                    }
+                } else {
+                    self::$_drivers[$key] = new $class($config);
+                }
             } else {
                 throw new \Exception("{$class} is not exists!");
             }
